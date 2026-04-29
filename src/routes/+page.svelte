@@ -1,9 +1,22 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
+
+  let songData = {
+    title: "VYZEE",
+    artist: "SOPHIE",
+    album: "PRODUCT",
+    largeImage: "dummy",
+    smallImage: "dummy",
+  };
 
   onMount(() => {
-    invoke("set_activity");
+    invoke("connect");
+    invoke("set_activity", songData);
+  });
+
+  onDestroy(() => {
+    invoke("disconnect");
   });
 </script>
 
