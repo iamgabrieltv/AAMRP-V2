@@ -2,7 +2,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import { onDestroy, onMount } from "svelte";
 
-  let songData = {
+  let songData: SongData = {
     title: "VYZEE",
     artist: "SOPHIE",
     album: "PRODUCT",
