@@ -1,6 +1,6 @@
 use std::sync::Mutex;
 
-use tauri::{menu::{Menu, MenuItem}, tray::TrayIconBuilder};
+use tauri::{Manager, menu::{Menu, MenuItem}, tray::TrayIconBuilder};
 use discord_rich_presence::{activity, DiscordIpc, DiscordIpcClient};
 
 struct ClientState {
@@ -62,6 +62,28 @@ pub fn run() {
                 .tooltip("AAMRP")
                 .build(app)?;
             Ok(())
+        })
+        .on_menu_event(|app, event| match event.id.as_ref() {
+            "quit" => {
+                app.exit(0);
+            }
+            "show" => {
+                let window = app.get_webview_window("main").unwrap();
+                if !window.is_visible().unwrap() {
+                    window.show().unwrap();
+                    window.set_focus().unwrap();
+                }
+            }
+            _ => {
+                println!("menu item {:?} not handled", event.id);
+            }
+        })
+        .on_window_event(|window, event| match event {
+            tauri::WindowEvent::CloseRequested { api, .. } => {
+                window.hide().unwrap();
+                api.prevent_close();
+            }
+            _ => {}
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
