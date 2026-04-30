@@ -1,5 +1,6 @@
 use std::sync::Mutex;
 
+use tauri::{menu::{Menu, MenuItem}, tray::TrayIconBuilder};
 use discord_rich_presence::{activity, DiscordIpc, DiscordIpcClient};
 
 struct ClientState {
@@ -49,6 +50,18 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![connect, disconnect, set_activity])
         .manage(ClientState {
             client: Mutex::new(DiscordIpcClient::new("1423726101519274056"))
+        })
+        .setup(|app| {
+            let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+            let show_i = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
+
+            TrayIconBuilder::new()
+                .menu(&menu)
+                .icon(app.default_window_icon().unwrap().clone())
+                .tooltip("AAMRP")
+                .build(app)?;
+            Ok(())
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
