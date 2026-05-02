@@ -55,35 +55,31 @@
             artist,
             album,
           }).then((result) => {
-            let album = result.results.album.data.find(
-              (a) =>
-                a.attributes.name.toLowerCase() ===
-                songData.album.toLowerCase(),
+            let albumData = result.results.album.data.find(
+              (a) => a.attributes.name.toLowerCase() === album.toLowerCase(),
             );
-            let artist = result.results.artist.data.find(
-              (a) =>
-                a.attributes.name.toLowerCase() ===
-                songData.artist.toLowerCase(),
+            let artistData = result.results.artist.data.find(
+              (a) => a.attributes.name.toLowerCase() === artist.toLowerCase(),
             );
-            if (artist === undefined) {
+            if (artistData === undefined) {
               console.error("Artist not found");
-              artist = result.results.artist.data[0];
+              artistData = result.results.artist.data[0];
             }
-            if (album === undefined) {
+            if (albumData === undefined) {
               console.error("Album not found");
-              album = result.results.album.data[0];
+              albumData = result.results.album.data[0];
             }
-            const albumArtwork = album.attributes.artwork.url
+            const albumArtwork = albumData.attributes.artwork.url
               .replace("{w}", "1024")
               .replace("{h}", "1024");
-            const artistArtwork = artist.attributes.artwork.url
+            const artistArtwork = artistData.attributes.artwork.url
               .replace("{w}", "1024")
               .replace("{h}", "1024");
 
             invoke("set_activity", {
-              title: songData.title,
-              artist: songData.artist,
-              album: songData.album,
+              title,
+              artist,
+              album,
               largeImage: albumArtwork,
               smallImage: artistArtwork,
             } as SongData);
