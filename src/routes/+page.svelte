@@ -9,11 +9,11 @@
   let intervalId: number;
 
   let songData: SongData = {
-    title: "VYZEE",
-    artist: "SOPHIE",
-    album: "PRODUCT",
-    largeImage: "dummy",
-    smallImage: "dummy",
+    title: "GARBAGE",
+    artist: "Melanie Martinez",
+    album: "HADES",
+    largeImage: "apple_music",
+    smallImage: "apple_music",
   };
 
   onMount(async () => {
@@ -38,11 +38,58 @@
             title,
             artist,
             album,
-            largeImage: "dummy",
-            smallImage: "dummy",
+            largeImage: "apple_music",
+            smallImage: "apple_music",
           } as SongData);
         }
       }, 10000);
+    }
+
+    if (currentPlatform !== "macos") {
+      invoke("set_activity", songData);
+
+      let result: AppleMusicData;
+      try {
+        result = await invoke("apple_request", {
+          title: songData.title,
+          artist: songData.artist,
+          album: songData.album,
+        });
+      } catch (error) {
+        console.error("apple_request error:", error);
+        invoke("clear_activity");
+        return;
+      }
+
+      let album = result.results.album.data.find(
+        (a) => a.attributes.name.toLowerCase() === songData.album.toLowerCase(),
+      );
+      let artist = result.results.artist.data.find(
+        (a) =>
+          a.attributes.name.toLowerCase() === songData.artist.toLowerCase(),
+      );
+      if (artist === undefined) {
+        console.error("Artist not found");
+        artist = result.results.artist.data[0];
+      }
+      if (album === undefined) {
+        console.error("Album not found");
+        album = result.results.album.data[0];
+      }
+      const albumArtwork = album.attributes.artwork.url
+        .replace("{w}", "1024")
+        .replace("{h}", "1024");
+      const artistArtwork = artist.attributes.artwork.url
+        .replace("{w}", "1024")
+        .replace("{h}", "1024");
+
+      invoke("set_activity", {
+        title: songData.title,
+        artist: songData.artist,
+        album: songData.album,
+        largeImage: albumArtwork,
+        smallImage: artistArtwork,
+      } as SongData);
     }
   });
 

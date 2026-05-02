@@ -6,3 +6,36 @@ interface SongData {
   smallImage: string;
   [key: string]: any;
 }
+
+interface AppleMusicData {
+  results: {
+    album: {
+      data: [
+        {
+          id: string;
+          attributes: {
+            artistName: string;
+            artwork: {
+              url: string;
+            };
+            name: string;
+            url: string;
+          };
+        },
+      ];
+    };
+    artist: {
+      data: [
+        {
+          id: string;
+          attributes: {
+            name: string;
+            artwork: {
+              url: string;
+            };
+          };
+        },
+      ];
+    };
+  };
+}

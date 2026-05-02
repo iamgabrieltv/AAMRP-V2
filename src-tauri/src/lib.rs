@@ -1,11 +1,14 @@
 use std::sync::Mutex;
 
 use discord_rich_presence::{activity, DiscordIpc, DiscordIpcClient};
+use serde_json::Value;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
     Manager,
 };
+use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, ORIGIN};
+use reqwest::Url;
 
 struct ClientState {
     client: Mutex<DiscordIpcClient>,
@@ -64,13 +67,42 @@ async fn set_activity(
     Ok(())
 }
 
+#[tauri::command]
+async fn apple_request(title: String, artist: String, album: String) -> Result<Value, String> {
+    let base_url = "https://amp-api-edge.music.apple.com/v1/catalog/us/search";
+    let mut url = Url::parse_with_params(
+        base_url,
+        &[
+            ("l", "en-US"),
+            ("limit", "21"),
+            ("platform", "web"),
+            ("types", "activities,albums,apple-curators,artists,curators,editorial-items,music-movies,music-videos,playlists,record-labels,songs,stations,tv-episodes,uploaded-videos"),
+            ("extend", "artistUrl"),
+            ("with", "lyricHighlights,lyrics,naturalLanguage,serverBubbles,subtitles"),
+        ],
+    ).map_err(|e| e.to_string())?;
+
+    let term = format!("{} {} {}", title, album, artist);
+    url.query_pairs_mut().append_pair("term", &term);
+
+    let mut headers = HeaderMap::new();
+    headers.insert(AUTHORIZATION, HeaderValue::from_static("Bearer eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IldlYlBsYXlLaWQifQ.eyJpc3MiOiJBTVBXZWJQbGF5IiwiaWF0IjoxNzc1ODY1MTMwLCJleHAiOjE3ODMxMjI3MzAsInJvb3RfaHR0cHNfb3JpZ2luIjpbImFwcGxlLmNvbSJdfQ.4vZrrfLuSubBlA6_V4k4VH5VVSq6i5xUa_0s1D5oGwaTgxD9M-WotMjMBlqi5M3ktO133nRk2ZncVYGeYP4sUg"));
+    headers.insert(ORIGIN, HeaderValue::from_static("https://music.apple.com"));
+
+    let client = reqwest::Client::new();
+    let response = client.get(url).headers(headers).send().await.map_err(|e| e.to_string())?;
+    let result = response.json::<Value>().await.map_err(|e| e.to_string())?;
+
+    Ok(result)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![connect, disconnect, clear_activity, set_activity])
+        .invoke_handler(tauri::generate_handler![connect, disconnect, clear_activity, set_activity, apple_request])
         .manage(ClientState {
             client: Mutex::new(DiscordIpcClient::new("1423726101519274056")),
         })
