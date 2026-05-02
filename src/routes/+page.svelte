@@ -20,6 +20,8 @@
     invoke("connect");
 
     if (currentPlatform === "macos") {
+      let oldOutput: string = "";
+
       intervalId = setInterval(async () => {
         const scriptPath = await resolveResource("resources/mac.scpt");
         const output = await Command.create("osascript", scriptPath).execute();
@@ -28,6 +30,12 @@
           console.error("Error executing AppleScript:", output.stderr);
           invoke("clear_activity");
           return;
+        }
+
+        if (oldOutput !== "" && oldOutput === output.stdout) {
+          return;
+        } else {
+          oldOutput = output.stdout;
         }
 
         const [title, artist, album, state] = output.stdout.split("$s$");
@@ -41,6 +49,45 @@
             largeImage: "apple_music",
             smallImage: "apple_music",
           } as SongData);
+
+          invoke<AppleMusicData>("apple_request", {
+            title,
+            artist,
+            album,
+          }).then((result) => {
+            let album = result.results.album.data.find(
+              (a) =>
+                a.attributes.name.toLowerCase() ===
+                songData.album.toLowerCase(),
+            );
+            let artist = result.results.artist.data.find(
+              (a) =>
+                a.attributes.name.toLowerCase() ===
+                songData.artist.toLowerCase(),
+            );
+            if (artist === undefined) {
+              console.error("Artist not found");
+              artist = result.results.artist.data[0];
+            }
+            if (album === undefined) {
+              console.error("Album not found");
+              album = result.results.album.data[0];
+            }
+            const albumArtwork = album.attributes.artwork.url
+              .replace("{w}", "1024")
+              .replace("{h}", "1024");
+            const artistArtwork = artist.attributes.artwork.url
+              .replace("{w}", "1024")
+              .replace("{h}", "1024");
+
+            invoke("set_activity", {
+              title: songData.title,
+              artist: songData.artist,
+              album: songData.album,
+              largeImage: albumArtwork,
+              smallImage: artistArtwork,
+            } as SongData);
+          });
         }
       }, 10000);
     }
