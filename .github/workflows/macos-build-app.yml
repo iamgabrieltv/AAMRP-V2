@@ -1,0 +1,16 @@
+name: Build macOS
+
+on:
+  workflow_dispatch
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - run: bun tauri build --bundles dmg
+      - uses: actions/upload-artifact@v7
+        with:
+          path: src-tauri/target/release/bundle/*
