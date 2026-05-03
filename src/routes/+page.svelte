@@ -40,7 +40,8 @@
           oldOutput = output.stdout;
         }
 
-        const [title, artist, album, state] = output.stdout.split("$s$");
+        const [title, artist, album, state, duration, position] =
+          output.stdout.split("$s$");
         if (state === "paused") {
           invoke("clear_activity");
         }
