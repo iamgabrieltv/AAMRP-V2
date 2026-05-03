@@ -4,6 +4,8 @@ interface SongData {
   album: string;
   largeImage: string;
   smallImage: string;
+  startT: number;
+  endT: number;
   [key: string]: any;
 }
 

@@ -9,20 +9,19 @@
   const currentPlatform = platform();
   let intervalId: number;
 
-  let songData: SongData = {
-    title: "GARBAGE",
-    artist: "Melanie Martinez",
-    album: "HADES",
-    largeImage: "apple_music",
-    smallImage: "apple_music",
-  };
-
   onMount(async () => {
     await invoke("connect");
 
     if (currentPlatform === "macos") {
       setDockVisibility(false);
       let oldOutput: string = "";
+      let timestamps = {
+        startTime: 0,
+        endTime: 0,
+        songName: "",
+        songAlbum: "",
+        songArtist: "",
+      };
 
       intervalId = setInterval(async () => {
         const scriptPath = await resolveResource("resources/mac.scpt");
@@ -40,16 +39,33 @@
           oldOutput = output.stdout;
         }
 
-        const [title, artist, album, state, duration, position] =
+        const [title, artist, album, state, duration] =
           output.stdout.split("$s$");
         if (state === "paused") {
           invoke("clear_activity");
+        }
+
+        // Calculate start and end timestamps if the song has changed
+        if (
+          timestamps.songName !== title &&
+          timestamps.songAlbum !== album &&
+          timestamps.songArtist !== artist
+        ) {
+          timestamps = {
+            startTime: Date.now(),
+            endTime: Date.now() + parseFloat(duration) * 1000,
+            songName: title,
+            songAlbum: album,
+            songArtist: artist,
+          };
         }
 
         invoke("set_activity", {
           title,
           artist,
           album,
+          startT: timestamps.startTime,
+          endT: timestamps.endTime,
           largeImage: "apple_music",
           smallImage: "apple_music",
         } as SongData);
@@ -84,6 +100,8 @@
             title,
             artist,
             album,
+            startT: timestamps.startTime,
+            endT: timestamps.endTime,
             largeImage: albumArtwork,
             smallImage: artistArtwork,
           } as SongData);
@@ -92,15 +110,21 @@
     }
 
     if (currentPlatform !== "macos") {
+      let songData: SongData = {
+        title: "GARBAGE",
+        artist: "Melanie Martinez",
+        album: "HADES",
+        largeImage: "apple_music",
+        smallImage: "apple_music",
+        startT: Date.now(),
+        endT: Date.now() + 60000,
+      };
+
       invoke("set_activity", songData);
 
       let result: AppleMusicData;
       try {
-        result = await invoke("apple_request", {
-          title: songData.title,
-          artist: songData.artist,
-          album: songData.album,
-        });
+        result = await invoke("apple_request", songData);
       } catch (error) {
         console.error("apple_request error:", error);
         invoke("clear_activity");
@@ -135,6 +159,8 @@
         album: songData.album,
         largeImage: albumArtwork,
         smallImage: artistArtwork,
+        startT: songData.startT,
+        endT: songData.endT,
       } as SongData);
     }
   });

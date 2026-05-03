@@ -47,6 +47,8 @@ async fn set_activity(
     album: String,
     large_image: String,
     small_image: String,
+    start_t: i64,
+    end_t: i64
 ) -> Result<(), String> {
     let mut client = state.client.lock().unwrap();
     let _ = client.set_activity(
@@ -61,6 +63,10 @@ async fn set_activity(
                     .large_text(album)
                     .small_image(small_image)
                     .small_text(&artist),
+            )
+            .timestamps(activity::Timestamps::new()
+                .start(start_t)
+                .end(end_t)
             ),
     );
 
