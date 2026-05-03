@@ -5,6 +5,7 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
+    "core:app:allow-set-dock-visibility",
     "opener:default",
     "os:default",
     "shell:default",
