@@ -18,7 +18,7 @@
   };
 
   onMount(async () => {
-    invoke("connect");
+    await invoke("connect");
 
     if (currentPlatform === "macos") {
       setDockVisibility(false);
@@ -43,50 +43,50 @@
         const [title, artist, album, state] = output.stdout.split("$s$");
         if (state === "paused") {
           invoke("clear_activity");
-        } else {
+        }
+
+        invoke("set_activity", {
+          title,
+          artist,
+          album,
+          largeImage: "apple_music",
+          smallImage: "apple_music",
+        } as SongData);
+
+        invoke<AppleMusicData>("apple_request", {
+          title,
+          artist,
+          album,
+        }).then((result) => {
+          let albumData = result.results.album.data.find(
+            (a) => a.attributes.name.toLowerCase() === album.toLowerCase(),
+          );
+          let artistData = result.results.artist.data.find(
+            (a) => a.attributes.name.toLowerCase() === artist.toLowerCase(),
+          );
+          if (artistData === undefined) {
+            console.error("Artist not found");
+            artistData = result.results.artist.data[0];
+          }
+          if (albumData === undefined) {
+            console.error("Album not found");
+            albumData = result.results.album.data[0];
+          }
+          const albumArtwork = albumData.attributes.artwork.url
+            .replace("{w}", "1024")
+            .replace("{h}", "1024");
+          const artistArtwork = artistData.attributes.artwork.url
+            .replace("{w}", "1024")
+            .replace("{h}", "1024");
+
           invoke("set_activity", {
             title,
             artist,
             album,
-            largeImage: "apple_music",
-            smallImage: "apple_music",
+            largeImage: albumArtwork,
+            smallImage: artistArtwork,
           } as SongData);
-
-          invoke<AppleMusicData>("apple_request", {
-            title,
-            artist,
-            album,
-          }).then((result) => {
-            let albumData = result.results.album.data.find(
-              (a) => a.attributes.name.toLowerCase() === album.toLowerCase(),
-            );
-            let artistData = result.results.artist.data.find(
-              (a) => a.attributes.name.toLowerCase() === artist.toLowerCase(),
-            );
-            if (artistData === undefined) {
-              console.error("Artist not found");
-              artistData = result.results.artist.data[0];
-            }
-            if (albumData === undefined) {
-              console.error("Album not found");
-              albumData = result.results.album.data[0];
-            }
-            const albumArtwork = albumData.attributes.artwork.url
-              .replace("{w}", "1024")
-              .replace("{h}", "1024");
-            const artistArtwork = artistData.attributes.artwork.url
-              .replace("{w}", "1024")
-              .replace("{h}", "1024");
-
-            invoke("set_activity", {
-              title,
-              artist,
-              album,
-              largeImage: albumArtwork,
-              smallImage: artistArtwork,
-            } as SongData);
-          });
-        }
+        });
       }, 10000);
     }
 
