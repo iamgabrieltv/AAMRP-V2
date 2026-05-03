@@ -38,7 +38,7 @@
           invoke("clear_activity");
         }
 
-        // Calculate start and end timestamps if the song has changed
+        // Calculate start and end timestamps
         const startT = Date.now() - parseFloat(position) * 1000;
         const endT =
           Date.now() + (parseFloat(duration) - parseFloat(position)) * 1000;
