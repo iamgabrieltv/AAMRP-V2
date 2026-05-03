@@ -39,7 +39,7 @@
           oldOutput = output.stdout;
         }
 
-        const [title, artist, album, state, duration] =
+        const [title, artist, album, state, duration, position] =
           output.stdout.split("$s$");
         if (state === "paused") {
           invoke("clear_activity");
@@ -47,17 +47,21 @@
 
         // Calculate start and end timestamps if the song has changed
         if (
-          timestamps.songName !== title &&
-          timestamps.songAlbum !== album &&
+          timestamps.songName !== title ||
+          timestamps.songAlbum !== album ||
           timestamps.songArtist !== artist
         ) {
           timestamps = {
-            startTime: Date.now(),
-            endTime: Date.now() + parseFloat(duration) * 1000,
+            startTime: Date.now() - parseFloat(position) * 1000,
+            endTime:
+              Date.now() + (parseFloat(duration) - parseFloat(position)) * 1000,
             songName: title,
             songAlbum: album,
             songArtist: artist,
           };
+        } else {
+          timestamps.endTime =
+            Date.now() + (parseFloat(duration) - parseFloat(position)) * 1000;
         }
 
         invoke("set_activity", {
