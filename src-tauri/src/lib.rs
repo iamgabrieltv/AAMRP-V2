@@ -1,14 +1,14 @@
 use std::sync::Mutex;
 
 use discord_rich_presence::{activity, DiscordIpc, DiscordIpcClient};
+use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, ORIGIN};
+use reqwest::Url;
 use serde_json::Value;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
     Manager,
 };
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, ORIGIN};
-use reqwest::Url;
 
 struct ClientState {
     client: Mutex<DiscordIpcClient>,
@@ -90,7 +90,12 @@ async fn apple_request(title: String, artist: String, album: String) -> Result<V
     headers.insert(ORIGIN, HeaderValue::from_static("https://music.apple.com"));
 
     let client = reqwest::Client::new();
-    let response = client.get(url).headers(headers).send().await.map_err(|e| e.to_string())?;
+    let response = client
+        .get(url)
+        .headers(headers)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
     let result = response.json::<Value>().await.map_err(|e| e.to_string())?;
 
     Ok(result)
@@ -102,7 +107,13 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![connect, disconnect, clear_activity, set_activity, apple_request])
+        .invoke_handler(tauri::generate_handler![
+            connect,
+            disconnect,
+            clear_activity,
+            set_activity,
+            apple_request
+        ])
         .manage(ClientState {
             client: Mutex::new(DiscordIpcClient::new("1423726101519274056")),
         })
