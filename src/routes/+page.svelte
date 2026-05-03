@@ -4,6 +4,7 @@
   import { Command } from "@tauri-apps/plugin-shell";
   import { resolveResource } from "@tauri-apps/api/path";
   import { onDestroy, onMount } from "svelte";
+  import { setDockVisibility } from "@tauri-apps/api/app";
 
   const currentPlatform = platform();
   let intervalId: number;
@@ -20,6 +21,7 @@
     invoke("connect");
 
     if (currentPlatform === "macos") {
+      setDockVisibility(false);
       let oldOutput: string = "";
 
       intervalId = setInterval(async () => {
