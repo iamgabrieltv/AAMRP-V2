@@ -15,13 +15,6 @@
     if (currentPlatform === "macos") {
       setDockVisibility(false);
       let oldOutput: string = "";
-      let timestamps = {
-        startTime: 0,
-        endTime: 0,
-        songName: "",
-        songAlbum: "",
-        songArtist: "",
-      };
 
       intervalId = setInterval(async () => {
         const scriptPath = await resolveResource("resources/mac.scpt");
@@ -46,30 +39,16 @@
         }
 
         // Calculate start and end timestamps if the song has changed
-        if (
-          timestamps.songName !== title ||
-          timestamps.songAlbum !== album ||
-          timestamps.songArtist !== artist
-        ) {
-          timestamps = {
-            startTime: Date.now() - parseFloat(position) * 1000,
-            endTime:
-              Date.now() + (parseFloat(duration) - parseFloat(position)) * 1000,
-            songName: title,
-            songAlbum: album,
-            songArtist: artist,
-          };
-        } else {
-          timestamps.endTime =
-            Date.now() + (parseFloat(duration) - parseFloat(position)) * 1000;
-        }
+        const startT = Date.now() - parseFloat(position) * 1000;
+        const endT =
+          Date.now() + (parseFloat(duration) - parseFloat(position)) * 1000;
 
         invoke("set_activity", {
           title,
           artist,
           album,
-          startT: timestamps.startTime,
-          endT: timestamps.endTime,
+          startT,
+          endT,
           largeImage: "apple_music",
           smallImage: "apple_music",
         } as SongData);
@@ -104,8 +83,8 @@
             title,
             artist,
             album,
-            startT: timestamps.startTime,
-            endT: timestamps.endTime,
+            startT,
+            endT,
             largeImage: albumArtwork,
             smallImage: artistArtwork,
           } as SongData);
