@@ -14,11 +14,12 @@
 
     if (currentPlatform === "macos") {
       setDockVisibility(false);
+      const scriptPath = await resolveResource("resources/mac.scpt");
+      const command = Command.create("osascript", scriptPath);
       let oldOutput: string[] = [];
 
       intervalId = setInterval(async () => {
-        const scriptPath = await resolveResource("resources/mac.scpt");
-        const output = await Command.create("osascript", scriptPath).execute();
+        const output = await command.execute();
 
         if (output.stderr.length > 0) {
           console.error("Error executing AppleScript:", output.stderr);
@@ -96,61 +97,6 @@
           } as SongData);
         });
       }, 10000);
-    }
-
-    if (currentPlatform !== "macos") {
-      let songData: SongData = {
-        title: "GARBAGE",
-        artist: "Melanie Martinez",
-        album: "HADES",
-        largeImage: "apple_music",
-        smallImage: "apple_music",
-        startT: Date.now(),
-        endT: Date.now() + 60000,
-      };
-
-      invoke("set_activity", songData);
-
-      let result: AppleMusicData;
-      try {
-        result = await invoke("apple_request", songData);
-      } catch (error) {
-        console.error("apple_request error:", error);
-        invoke("clear_activity");
-        return;
-      }
-
-      let album = result.results.album.data.find(
-        (a) => a.attributes.name.toLowerCase() === songData.album.toLowerCase(),
-      );
-      let artist = result.results.artist.data.find(
-        (a) =>
-          a.attributes.name.toLowerCase() === songData.artist.toLowerCase(),
-      );
-      if (artist === undefined) {
-        console.error("Artist not found");
-        artist = result.results.artist.data[0];
-      }
-      if (album === undefined) {
-        console.error("Album not found");
-        album = result.results.album.data[0];
-      }
-      const albumArtwork = album.attributes.artwork.url
-        .replace("{w}", "1024")
-        .replace("{h}", "1024");
-      const artistArtwork = artist.attributes.artwork.url
-        .replace("{w}", "1024")
-        .replace("{h}", "1024");
-
-      invoke("set_activity", {
-        title: songData.title,
-        artist: songData.artist,
-        album: songData.album,
-        largeImage: albumArtwork,
-        smallImage: artistArtwork,
-        startT: songData.startT,
-        endT: songData.endT,
-      } as SongData);
     }
   });
 
