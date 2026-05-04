@@ -14,7 +14,7 @@
 
     if (currentPlatform === "macos") {
       setDockVisibility(false);
-      let oldOutput: string = "";
+      let oldOutput: string[] = [];
 
       intervalId = setInterval(async () => {
         const scriptPath = await resolveResource("resources/mac.scpt");
@@ -26,22 +26,26 @@
           return;
         }
 
-        if (oldOutput !== "" && oldOutput === output.stdout) {
-          return;
-        } else {
-          oldOutput = output.stdout;
-        }
-
         const [title, artist, album, state, duration, position] =
           output.stdout.split("$s$");
         if (state === "paused") {
           invoke("clear_activity");
         }
 
+        if (
+          oldOutput.length > 0 &&
+          oldOutput.every((v, i) => v === [title, artist, album, state][i])
+        ) {
+          return;
+        } else {
+          oldOutput = [title, artist, album, state];
+        }
+
         // Calculate start and end timestamps
-        const startT = Date.now() - parseFloat(position) * 1000;
-        const endT =
-          Date.now() + (parseFloat(duration) - parseFloat(position)) * 1000;
+        const startT = Math.floor(Date.now() - parseFloat(position) * 1000);
+        const endT = Math.floor(
+          Date.now() + (parseFloat(duration) - parseFloat(position)) * 1000,
+        );
 
         invoke("set_activity", {
           title,
