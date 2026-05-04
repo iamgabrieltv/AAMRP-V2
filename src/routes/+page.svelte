@@ -63,10 +63,10 @@
           album,
         }).then((result) => {
           let albumData = result.results.album.data.find(
-            (a) => a.attributes.name.toLowerCase() === album.toLowerCase(),
+            (a) => a.attributes.name === album,
           );
           let artistData = result.results.artist.data.find(
-            (a) => a.attributes.name.toLowerCase() === artist.toLowerCase(),
+            (a) => a.attributes.name === artist,
           );
           if (artistData === undefined) {
             console.error("Artist not found");
