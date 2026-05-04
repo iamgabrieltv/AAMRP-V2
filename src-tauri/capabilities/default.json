@@ -2,7 +2,9 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:default",
     "core:app:allow-set-dock-visibility",
@@ -15,9 +17,14 @@
         {
           "name": "osascript",
           "cmd": "/usr/bin/osascript",
-          "args": [{ "validator": ".+\\.scpt$" }]
+          "args": [
+            {
+              "validator": ".+\\.scpt$"
+            }
+          ]
         }
       ]
-    }
+    },
+    "store:default"
   ]
 }

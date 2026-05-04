@@ -1,15 +1,27 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
+  import { resolveResource } from "@tauri-apps/api/path";
+  import { setDockVisibility } from "@tauri-apps/api/app";
+  import { listen } from "@tauri-apps/api/event";
   import { platform } from "@tauri-apps/plugin-os";
   import { Command } from "@tauri-apps/plugin-shell";
-  import { resolveResource } from "@tauri-apps/api/path";
+  import { Store } from "@tauri-apps/plugin-store";
   import { onDestroy, onMount } from "svelte";
-  import { setDockVisibility } from "@tauri-apps/api/app";
 
   const currentPlatform = platform();
   let intervalId: number;
+  let store: Store;
+
+  let interval: number | undefined = $state();
 
   onMount(async () => {
+    store = await Store.load("config.json");
+    interval = await store.get<number>("interval");
+    if (interval === undefined) {
+      await store.set("interval", 5);
+      interval = 5;
+    }
+
     await invoke("connect");
 
     if (currentPlatform === "macos") {
@@ -18,7 +30,9 @@
       const command = Command.create("osascript", scriptPath);
       let oldOutput: string[] = [];
 
-      intervalId = setInterval(async () => {
+      invoke("set_interval", { interval });
+
+      async function setActivity() {
         const output = await command.execute();
 
         if (output.stderr.length > 0) {
@@ -96,16 +110,28 @@
             smallImage: artistArtwork,
           } as SongData);
         });
-      }, 10000);
+      }
+
+      listen("tick", setActivity);
     }
   });
 
-  onDestroy(() => {
-    clearInterval(intervalId);
+  onDestroy(async () => {
     invoke("disconnect");
+    await store.save();
   });
+
+  let message = $state();
+  function applyHandler() {
+    store.set("interval", interval);
+    store.save();
+    message = "Restart the app to fully apply changes";
+  }
 </script>
 
 <main>
   <h1>Hi</h1>
+  <input type="number" bind:value={interval} min="1" />
+  <button onclick={applyHandler}>Apply</button>
+  <p>{message}</p>
 </main>

@@ -1,4 +1,5 @@
 use std::sync::Mutex;
+use std::time::Duration;
 
 use discord_rich_presence::{activity, DiscordIpc, DiscordIpcClient};
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, ORIGIN};
@@ -7,11 +8,23 @@ use serde_json::Value;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
-    Manager,
+    AppHandle, Emitter, Manager,
 };
 
 struct ClientState {
     client: Mutex<DiscordIpcClient>,
+}
+
+#[tauri::command]
+async fn set_interval(app: AppHandle, interval: u64) -> Result<(), String> {
+    tauri::async_runtime::spawn(async move {
+        let mut tick = tokio::time::interval(Duration::from_millis(interval));
+        loop {
+            tick.tick().await;
+            app.emit("tick", ()).unwrap();
+        }
+    });
+    Ok(())
 }
 
 #[tauri::command]
@@ -48,7 +61,7 @@ async fn set_activity(
     large_image: String,
     small_image: String,
     start_t: i64,
-    end_t: i64
+    end_t: i64,
 ) -> Result<(), String> {
     let mut client = state.client.lock().unwrap();
     let _ = client.set_activity(
@@ -64,10 +77,7 @@ async fn set_activity(
                     .small_image(small_image)
                     .small_text(&artist),
             )
-            .timestamps(activity::Timestamps::new()
-                .start(start_t)
-                .end(end_t)
-            ),
+            .timestamps(activity::Timestamps::new().start(start_t).end(end_t)),
     );
 
     Ok(())
@@ -110,6 +120,7 @@ async fn apple_request(title: String, artist: String, album: String) -> Result<V
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_opener::init())
@@ -118,7 +129,8 @@ pub fn run() {
             disconnect,
             clear_activity,
             set_activity,
-            apple_request
+            apple_request,
+            set_interval
         ])
         .manage(ClientState {
             client: Mutex::new(DiscordIpcClient::new("1423726101519274056")),
