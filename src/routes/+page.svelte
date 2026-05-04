@@ -66,7 +66,7 @@
             (a) => a.attributes.name === album,
           );
           let artistData = result.results.artist.data.find(
-            (a) => a.attributes.name === artist,
+            (a) => a.attributes.url === albumData?.attributes.artistUrl,
           );
           if (artistData === undefined) {
             console.error("Artist not found");

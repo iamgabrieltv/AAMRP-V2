@@ -17,6 +17,7 @@ interface AppleMusicData {
           id: string;
           attributes: {
             artistName: string;
+            artistUrl: string;
             artwork: {
               url: string;
             };
@@ -32,6 +33,7 @@ interface AppleMusicData {
           id: string;
           attributes: {
             name: string;
+            url: string;
             artwork: {
               url: string;
             };
