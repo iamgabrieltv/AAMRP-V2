@@ -9,14 +9,6 @@
   const currentPlatform = platform();
   let intervalId: number;
 
-  let songData: SongData = {
-    title: "GARBAGE",
-    artist: "Melanie Martinez",
-    album: "HADES",
-    largeImage: "apple_music",
-    smallImage: "apple_music",
-  };
-
   onMount(async () => {
     await invoke("connect");
 
@@ -40,15 +32,23 @@
           oldOutput = output.stdout;
         }
 
-        const [title, artist, album, state] = output.stdout.split("$s$");
+        const [title, artist, album, state, duration, position] =
+          output.stdout.split("$s$");
         if (state === "paused") {
           invoke("clear_activity");
         }
+
+        // Calculate start and end timestamps
+        const startT = Date.now() - parseFloat(position) * 1000;
+        const endT =
+          Date.now() + (parseFloat(duration) - parseFloat(position)) * 1000;
 
         invoke("set_activity", {
           title,
           artist,
           album,
+          startT,
+          endT,
           largeImage: "apple_music",
           smallImage: "apple_music",
         } as SongData);
@@ -83,6 +83,8 @@
             title,
             artist,
             album,
+            startT,
+            endT,
             largeImage: albumArtwork,
             smallImage: artistArtwork,
           } as SongData);
@@ -91,15 +93,21 @@
     }
 
     if (currentPlatform !== "macos") {
+      let songData: SongData = {
+        title: "GARBAGE",
+        artist: "Melanie Martinez",
+        album: "HADES",
+        largeImage: "apple_music",
+        smallImage: "apple_music",
+        startT: Date.now(),
+        endT: Date.now() + 60000,
+      };
+
       invoke("set_activity", songData);
 
       let result: AppleMusicData;
       try {
-        result = await invoke("apple_request", {
-          title: songData.title,
-          artist: songData.artist,
-          album: songData.album,
-        });
+        result = await invoke("apple_request", songData);
       } catch (error) {
         console.error("apple_request error:", error);
         invoke("clear_activity");
@@ -134,6 +142,8 @@
         album: songData.album,
         largeImage: albumArtwork,
         smallImage: artistArtwork,
+        startT: songData.startT,
+        endT: songData.endT,
       } as SongData);
     }
   });
