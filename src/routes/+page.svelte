@@ -28,9 +28,6 @@
 
         const [title, artist, album, state, duration, position] =
           output.stdout.split("$s$");
-        if (state === "paused") {
-          invoke("clear_activity");
-        }
 
         if (
           oldOutput.length > 0 &&
@@ -39,6 +36,11 @@
           return;
         } else {
           oldOutput = [title, artist, album, state];
+        }
+
+        if (state === "paused") {
+          invoke("clear_activity");
+          return;
         }
 
         // Calculate start and end timestamps
