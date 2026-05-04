@@ -9,7 +9,6 @@
   import { onDestroy, onMount } from "svelte";
 
   const currentPlatform = platform();
-  let intervalId: number;
   let store: Store;
 
   let interval: number | undefined = $state();
@@ -30,7 +29,7 @@
       const command = Command.create("osascript", scriptPath);
       let oldOutput: string[] = [];
 
-      invoke("set_interval", { interval });
+      invoke("set_interval", { interval: interval * 1000 });
 
       async function setActivity() {
         const output = await command.execute();
