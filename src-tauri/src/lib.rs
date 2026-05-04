@@ -126,8 +126,8 @@ pub fn run() {
                 let window = app.get_webview_window("main").unwrap();
                 if !window.is_visible().unwrap() {
                     window.show().unwrap();
-                    window.set_focus().unwrap();
                 }
+                window.set_focus().unwrap();
             }
             _ => {
                 println!("menu item {:?} not handled", event.id);
