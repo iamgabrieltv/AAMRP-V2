@@ -5,6 +5,7 @@ use discord_rich_presence::{activity, DiscordIpc, DiscordIpcClient};
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, ORIGIN};
 use reqwest::Url;
 use serde_json::Value;
+use tauri::image::Image;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
@@ -139,10 +140,25 @@ pub fn run() {
             let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let show_i = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
+            let tray_icon: Image = {
+                #[cfg(target_os = "macos")]
+                {
+                    let tray_path = app.path().resolve(
+                        "icons/TrayIcon-Template.png",
+                        tauri::path::BaseDirectory::Resource,
+                    )?;
+                    Image::from_path(tray_path)?
+                }
+                #[cfg(not(target_os = "macos"))]
+                {
+                    app.default_window_icon().unwrap().clone()
+                }
+            };
 
             TrayIconBuilder::new()
                 .menu(&menu)
-                .icon(app.default_window_icon().unwrap().clone())
+                .icon(tray_icon)
+                .icon_as_template(true)
                 .tooltip("AAMRP")
                 .build(app)?;
             Ok(())
