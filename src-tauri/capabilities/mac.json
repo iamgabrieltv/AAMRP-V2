@@ -1,0 +1,23 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "mac-capability",
+  "platforms": ["macOS"],
+  "windows": ["main"],
+  "permissions": [
+    "core:app:allow-set-dock-visibility",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "osascript",
+          "cmd": "/usr/bin/osascript",
+          "args": [
+            {
+              "validator": ".+\\.scpt$"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
