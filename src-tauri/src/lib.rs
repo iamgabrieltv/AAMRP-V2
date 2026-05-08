@@ -64,24 +64,39 @@ async fn set_activity(
     start_t: i64,
     end_t: i64,
 ) -> Result<(), String> {
-    let mut client = state.client.lock().unwrap();
-    let _ = client.set_activity(
-        activity::Activity::new()
-            .activity_type(activity::ActivityType::Listening)
-            .status_display_type(activity::StatusDisplayType::State)
-            .state(&artist)
-            .details(title)
-            .assets(
-                activity::Assets::new()
-                    .large_image(large_image)
-                    .large_text(album)
-                    .small_image(small_image)
-                    .small_text(&artist),
-            )
-            .timestamps(activity::Timestamps::new().start(start_t).end(end_t)),
-    );
-
-    Ok(())
+    let mut attempts = 0;
+    
+    loop {
+        let mut client = state.client.lock().unwrap();
+        let result = client.set_activity(
+            activity::Activity::new()
+                .activity_type(activity::ActivityType::Listening)
+                .status_display_type(activity::StatusDisplayType::State)
+                .state(&artist)
+                .details(title.clone())
+                .assets(
+                    activity::Assets::new()
+                        .large_image(large_image.clone())
+                        .large_text(album.clone())
+                        .small_image(small_image.clone())
+                        .small_text(&artist),
+                )
+                .timestamps(activity::Timestamps::new().start(start_t).end(end_t)),
+        );
+        
+        match result {
+            Ok(_) => return Ok(()),
+            Err(_) => {
+                if attempts < 3 {
+                    client.connect();
+                    drop(client);
+                    attempts += 1;
+                } else {
+                    return Err("Failed to set activity after 3 reconnection attempts".to_string());
+                }
+            }
+        }
+    }
 }
 
 #[tauri::command]
