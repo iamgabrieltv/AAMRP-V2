@@ -6,14 +6,17 @@
   import { platform } from "@tauri-apps/plugin-os";
   import { Command } from "@tauri-apps/plugin-shell";
   import { Store } from "@tauri-apps/plugin-store";
+  import { enable, isEnabled, disable } from "@tauri-apps/plugin-autostart";
   import { onDestroy, onMount } from "svelte";
 
   const currentPlatform = platform();
   let store: Store;
 
-  let interval: number | undefined = $state();
+  let interval = $state<number>();
+  let autostart = $state<boolean>();
 
   onMount(async () => {
+    autostart = await isEnabled();
     store = await Store.load("config.json");
     interval = await store.get<number>("interval");
     if (interval === undefined) {
@@ -120,17 +123,42 @@
     await store.save();
   });
 
-  let message = $state();
-  function applyHandler() {
-    store.set("interval", interval);
-    store.save();
-    message = "Restart the app to fully apply changes";
+  let message = $state<string>();
+  async function applyHandler() {
+    if (interval !== (await store.get<number>("interval"))) {
+      message = "Restart the app for changes to take effect.";
+    }
+    if (autostart) {
+      await enable();
+    } else {
+      await disable();
+    }
+    await store.set("interval", interval);
+    await store.save();
   }
 </script>
 
-<main>
-  <h1>Hi</h1>
-  <input type="number" bind:value={interval} min="1" />
-  <button onclick={applyHandler}>Apply</button>
-  <p>{message}</p>
+<main class="p-2">
+  <h1 class="text-4xl font-bold">Settings</h1>
+  <form class="flex flex-col gap-1 items-start">
+    <label class="flex flex-col"
+      >Update Interval (seconds) <input
+        type="number"
+        bind:value={interval}
+        min="1"
+        class="rounded-sm px-1"
+      /></label
+    >
+    <label class="flex flex-col"
+      >Autostart app on system startup <input
+        type="checkbox"
+        bind:checked={autostart}
+        class="w-5 h-5 rounded-sm"
+      /></label
+    >
+    <button onclick={applyHandler} class="w-fit p-1 my-1 rounded-md"
+      >Apply</button
+    >
+  </form>
+  <p class="text-[#f38ba8] font-bold text-pretty">{message}</p>
 </main>
