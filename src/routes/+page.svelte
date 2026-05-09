@@ -8,6 +8,7 @@
   import { Store } from "@tauri-apps/plugin-store";
   import { enable, isEnabled, disable } from "@tauri-apps/plugin-autostart";
   import { onDestroy, onMount } from "svelte";
+  import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 
   const currentPlatform = platform();
   let store: Store;
@@ -17,6 +18,10 @@
 
   onMount(async () => {
     autostart = await isEnabled();
+    if (autostart) {
+      await getCurrentWebviewWindow().hide();
+    }
+
     store = await Store.load("config.json");
     interval = await store.get<number>("interval");
     if (interval === undefined) {
@@ -123,7 +128,7 @@
     await store.save();
   });
 
-  let message = $state<string>();
+  let message = $state<string>("");
   async function applyHandler() {
     if (interval !== (await store.get<number>("interval"))) {
       message = "Restart the app for changes to take effect.";
@@ -135,6 +140,9 @@
     }
     await store.set("interval", interval);
     await store.save();
+    if (message === "") {
+      message = "Settings applied.";
+    }
   }
 </script>
 
