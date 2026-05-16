@@ -1,0 +1,15 @@
+name: Build Windows
+
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - run: bun tauri build
+      - uses: actions/upload-artifact@v7
+        with:
+          path: src-tauri/target/release/bundle/*
