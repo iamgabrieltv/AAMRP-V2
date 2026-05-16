@@ -13,6 +13,9 @@ use tauri::{
 };
 
 #[cfg(target_os = "windows")]
+use std::sync::Arc;
+
+#[cfg(target_os = "windows")]
 use windows::Media::Control::{
     GlobalSystemMediaTransportControlsSessionManager,
     GlobalSystemMediaTransportControlsSessionPlaybackStatus,
@@ -20,11 +23,21 @@ use windows::Media::Control::{
 
 #[cfg(target_os = "windows")]
 #[tauri::command]
-async fn get_listening_status_win() -> Result<Value, String> {
-    let manager = GlobalSystemMediaTransportControlsSessionManager::RequestAsync()
-        .unwrap()
-        .await
-        .unwrap();
+async fn get_listening_status_win(state: tauri::State<'_, ClientState>) -> Result<Value, String> {
+    let manager = {
+        let maybe_manager = state.manager.lock().unwrap().clone();
+        if let Some(manager) = maybe_manager {
+            manager
+        } else {
+            let new_manager = GlobalSystemMediaTransportControlsSessionManager::RequestAsync()
+                .map_err(|e| format!("Failed to request manager: {e}"))?
+                .await
+                .map_err(|e| format!("Failed to await manager request: {e}"))?;
+            let manager = Arc::new(new_manager);
+            *state.manager.lock().unwrap() = Some(manager.clone());
+            manager
+        }
+    };
     let session = manager
         .GetCurrentSession()
         .map_err(|e| format!("Failed to get current session: {e}"))?;
@@ -74,6 +87,8 @@ async fn get_listening_status_win() -> Result<Value, String> {
 struct ClientState {
     client: Mutex<DiscordIpcClient>,
     http_client: Mutex<Option<Client>>,
+    #[cfg(target_os = "windows")]
+    manager: Mutex<Option<Arc<GlobalSystemMediaTransportControlsSessionManager>>>,
 }
 
 #[tauri::command]
@@ -168,9 +183,7 @@ async fn apple_request(
 ) -> Result<Value, String> {
     let client = {
         let mut http_client = state.http_client.lock().unwrap();
-        http_client
-            .get_or_insert_with(Client::new)
-            .clone()
+        http_client.get_or_insert_with(Client::new).clone()
     };
 
     let base_url = "https://amp-api-edge.music.apple.com/v1/catalog/us/search";
@@ -225,6 +238,8 @@ pub fn run() {
         .manage(ClientState {
             client: Mutex::new(DiscordIpcClient::new("1423726101519274056")),
             http_client: Mutex::new(None),
+            #[cfg(target_os = "windows")]
+            manager: Mutex::new(None),
         })
         .setup(|app| {
             let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
