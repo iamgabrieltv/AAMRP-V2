@@ -1,9 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import { appleRequest } from "./common";
 
-export async function setActivityWin(
-  oldOutput: (string | boolean)[],
-): Promise<void | (string | boolean)[]> {
+export async function setActivityWin(oldOutput: {
+  [key: string]: any;
+}): Promise<void | {}> {
   const output = await invoke<WindowsMediaResponse>(
     "get_listening_status_win",
   ).catch((error) => {
@@ -13,26 +13,24 @@ export async function setActivityWin(
 
   if (output) {
     if (
-      oldOutput.length > 0 &&
-      oldOutput.every(
-        (v, i) =>
-          v ===
-          [output.title, output.artist, output.album, output.is_playing][i],
-      )
+      oldOutput.title === output.title &&
+      oldOutput.artist === output.artist &&
+      oldOutput.album === output.album &&
+      oldOutput.is_playing === output.is_playing
     ) {
       return;
     } else {
-      oldOutput = [
-        output.title,
-        output.artist,
-        output.album,
-        output.is_playing,
-      ];
+      oldOutput = {
+        title: output.title,
+        artist: output.artist,
+        album: output.album,
+        is_playing: output.is_playing,
+      };
     }
 
     if (!output.is_playing) {
       invoke("clear_activity");
-      return;
+      return oldOutput;
     }
 
     // Calculate start and end timestamps

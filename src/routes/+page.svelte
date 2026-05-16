@@ -58,7 +58,7 @@
     }
 
     if (currentPlatform === "windows" && !ranInit) {
-      let oldOutput: (string | boolean)[] = [];
+      let oldOutput = {};
 
       invoke("set_interval", { interval });
 

@@ -28,7 +28,7 @@ export async function setActivityMac(
 
   if (state === "paused") {
     invoke("clear_activity");
-    return;
+    return oldOutput;
   }
 
   // Calculate start and end timestamps
