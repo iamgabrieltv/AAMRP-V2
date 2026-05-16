@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use discord_rich_presence::{activity, DiscordIpc, DiscordIpcClient};
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, ORIGIN};
-use reqwest::Url;
+use reqwest::{Client, Url};
 use serde_json::Value;
 use tauri::image::Image;
 use tauri::{
@@ -73,6 +73,7 @@ async fn get_listening_status_win() -> Result<Value, String> {
 
 struct ClientState {
     client: Mutex<DiscordIpcClient>,
+    http_client: Mutex<Option<Client>>,
 }
 
 #[tauri::command]
@@ -159,7 +160,19 @@ async fn set_activity(
 }
 
 #[tauri::command]
-async fn apple_request(title: String, artist: String, album: String) -> Result<Value, String> {
+async fn apple_request(
+    state: tauri::State<'_, ClientState>,
+    title: String,
+    artist: String,
+    album: String,
+) -> Result<Value, String> {
+    let client = {
+        let mut http_client = state.http_client.lock().unwrap();
+        http_client
+            .get_or_insert_with(Client::new)
+            .clone()
+    };
+
     let base_url = "https://amp-api-edge.music.apple.com/v1/catalog/us/search";
     let mut url = Url::parse_with_params(
         base_url,
@@ -180,7 +193,6 @@ async fn apple_request(title: String, artist: String, album: String) -> Result<V
     headers.insert(AUTHORIZATION, HeaderValue::from_static("Bearer eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IldlYlBsYXlLaWQifQ.eyJpc3MiOiJBTVBXZWJQbGF5IiwiaWF0IjoxNzc1ODY1MTMwLCJleHAiOjE3ODMxMjI3MzAsInJvb3RfaHR0cHNfb3JpZ2luIjpbImFwcGxlLmNvbSJdfQ.4vZrrfLuSubBlA6_V4k4VH5VVSq6i5xUa_0s1D5oGwaTgxD9M-WotMjMBlqi5M3ktO133nRk2ZncVYGeYP4sUg"));
     headers.insert(ORIGIN, HeaderValue::from_static("https://music.apple.com"));
 
-    let client = reqwest::Client::new();
     let response = client
         .get(url)
         .headers(headers)
@@ -212,6 +224,7 @@ pub fn run() {
         ])
         .manage(ClientState {
             client: Mutex::new(DiscordIpcClient::new("1423726101519274056")),
+            http_client: Mutex::new(None),
         })
         .setup(|app| {
             let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
