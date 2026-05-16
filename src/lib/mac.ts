@@ -1,10 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import { Command } from "@tauri-apps/plugin-shell";
+import { appleRequest } from "./common";
 
 export async function setActivityMac(
   command: Command<string>,
   oldOutput: string[],
-) {
+): Promise<string[] | void> {
   const output = await command.execute();
 
   if (output.stderr.length > 0) {
@@ -46,40 +47,8 @@ export async function setActivityMac(
     smallImage: "apple_music",
   } as SongData);
 
-  invoke<AppleMusicData>("apple_request", {
-    title,
-    artist,
-    album,
-  }).then((result) => {
-    let albumData = result.results.album.data.find(
-      (a) => a.attributes.name === album,
-    );
-    let artistData = result.results.artist.data.find(
-      (a) => a.attributes.url === albumData?.attributes.artistUrl,
-    );
-    if (artistData === undefined) {
-      console.error("Artist not found");
-      artistData = result.results.artist.data[0];
-    }
-    if (albumData === undefined) {
-      console.error("Album not found");
-      albumData = result.results.album.data[0];
-    }
-    const albumArtwork = albumData.attributes.artwork.url
-      .replace("{w}", "1024")
-      .replace("{h}", "1024");
-    const artistArtwork = artistData.attributes.artwork.url
-      .replace("{w}", "1024")
-      .replace("{h}", "1024");
+  appleRequest(title, artist, album, startT, endT);
 
-    invoke("set_activity", {
-      title,
-      artist,
-      album,
-      startT,
-      endT,
-      largeImage: albumArtwork,
-      smallImage: artistArtwork,
-    } as SongData);
-  });
+  // return oldOutput so it can be used in the next call
+  return oldOutput;
 }

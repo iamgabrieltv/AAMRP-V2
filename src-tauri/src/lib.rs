@@ -12,6 +12,65 @@ use tauri::{
     AppHandle, Emitter, Manager,
 };
 
+#[cfg(target_os = "windows")]
+use windows::Media::Control::{
+    GlobalSystemMediaTransportControlsSessionManager,
+    GlobalSystemMediaTransportControlsSessionPlaybackStatus,
+};
+
+#[cfg(target_os = "windows")]
+#[tauri::command]
+async fn get_listening_status_win() -> Result<Value, String> {
+    let manager = GlobalSystemMediaTransportControlsSessionManager::RequestAsync()
+        .unwrap()
+        .await
+        .unwrap();
+    let session = manager
+        .GetCurrentSession()
+        .map_err(|e| format!("Failed to get current session: {e}"))?;
+
+    let session_app_id = session
+        .SourceAppUserModelId()
+        .map_err(|e| format!("Failed to read current session app id: {e}"))?
+        .to_string()
+        .to_lowercase();
+
+    if session_app_id.contains("applemusic") {
+        let status = {
+            let playback_info = session.GetPlaybackInfo().unwrap();
+            match playback_info.PlaybackStatus().unwrap() {
+                GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing => true,
+                GlobalSystemMediaTransportControlsSessionPlaybackStatus::Paused => false,
+                _ => false,
+            }
+        };
+        let media_properties = session.TryGetMediaPropertiesAsync().unwrap().await.unwrap();
+        let [artist, album] = media_properties
+            .Artist()
+            .unwrap()
+            .to_string()
+            .split(" — ")
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>()
+            .try_into()
+            .unwrap_or_else(|_| [String::new(), String::new()]);
+        let timeline_properties = session.GetTimelineProperties().unwrap();
+
+        return Ok(serde_json::json!({
+            "title": media_properties.Title().unwrap().to_string(),
+            "artist": artist,
+            "album": album,
+            "is_playing": status,
+            "position": timeline_properties.Position().unwrap().Duration / 10000000,
+            "duration": timeline_properties.EndTime().unwrap().Duration / 10000000
+        }));
+    };
+
+    Err(format!(
+        "No Apple Music session found (current session app id: {session_app_id})"
+    ))
+}
+
 struct ClientState {
     client: Mutex<DiscordIpcClient>,
 }
@@ -65,7 +124,7 @@ async fn set_activity(
     end_t: i64,
 ) -> Result<(), String> {
     let mut attempts = 0;
-    
+
     loop {
         let mut client = state.client.lock().unwrap();
         let result = client.set_activity(
@@ -83,7 +142,7 @@ async fn set_activity(
                 )
                 .timestamps(activity::Timestamps::new().start(start_t).end(end_t)),
         );
-        
+
         match result {
             Ok(_) => return Ok(()),
             Err(_) => {
@@ -147,7 +206,9 @@ pub fn run() {
             clear_activity,
             set_activity,
             apple_request,
-            set_interval
+            set_interval,
+            #[cfg(target_os = "windows")]
+            get_listening_status_win
         ])
         .manage(ClientState {
             client: Mutex::new(DiscordIpcClient::new("1423726101519274056")),

@@ -43,3 +43,12 @@ interface AppleMusicData {
     };
   };
 }
+
+interface WindowsMediaResponse {
+  title: string;
+  artist: string;
+  album: string;
+  is_playing: boolean;
+  position: number;
+  duration: number;
+}

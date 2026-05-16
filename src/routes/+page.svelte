@@ -10,12 +10,15 @@
   import { onDestroy, onMount } from "svelte";
   import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
   import { setActivityMac } from "$lib/mac";
+  import { setActivityWin } from "$lib/win";
 
   const currentPlatform = platform();
-  let store: Store;
 
+  let store: Store;
   let interval = $state<number>();
   let autostart = $state<boolean>();
+
+  let ranInit = false;
 
   onMount(async () => {
     autostart = await isEnabled();
@@ -32,15 +35,43 @@
 
     await invoke("connect");
 
-    if (currentPlatform === "macos") {
+    if (currentPlatform === "macos" && !ranInit) {
       setDockVisibility(false);
       const scriptPath = await resolveResource("resources/mac.scpt");
       const command = Command.create("osascript", scriptPath);
       let oldOutput: string[] = [];
 
-      invoke("set_interval", { interval: interval });
+      invoke("set_interval", { interval });
 
-      listen("tick", () => setActivityMac(command, oldOutput));
+      function setActivity() {
+        setActivityMac(command, oldOutput).then((output) => {
+          {
+            if (output) {
+              oldOutput = output;
+            }
+          }
+        });
+      }
+
+      listen("tick", setActivity);
+      ranInit = true;
+    }
+
+    if (currentPlatform === "windows" && !ranInit) {
+      let oldOutput: (string | boolean)[] = [];
+
+      invoke("set_interval", { interval });
+
+      function setActivity() {
+        setActivityWin(oldOutput).then((output) => {
+          if (output) {
+            oldOutput = output;
+          }
+        });
+      }
+
+      listen("tick", setActivity);
+      ranInit = true;
     }
   });
 
