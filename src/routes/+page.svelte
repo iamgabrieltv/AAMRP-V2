@@ -9,6 +9,7 @@
   import { enable, isEnabled, disable } from "@tauri-apps/plugin-autostart";
   import { onDestroy, onMount } from "svelte";
   import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+  import { setActivityMac } from "$lib/mac";
 
   const currentPlatform = platform();
   let store: Store;
@@ -37,89 +38,9 @@
       const command = Command.create("osascript", scriptPath);
       let oldOutput: string[] = [];
 
-      invoke("set_interval", { interval: interval * 1000 });
+      invoke("set_interval", { interval: interval });
 
-      async function setActivity() {
-        const output = await command.execute();
-
-        if (output.stderr.length > 0) {
-          console.error("Error executing AppleScript:", output.stderr);
-          invoke("clear_activity");
-          return;
-        }
-
-        const [title, artist, album, state, duration, position] =
-          output.stdout.split("$s$");
-
-        if (
-          oldOutput.length > 0 &&
-          oldOutput.every((v, i) => v === [title, artist, album, state][i])
-        ) {
-          return;
-        } else {
-          oldOutput = [title, artist, album, state];
-        }
-
-        if (state === "paused") {
-          invoke("clear_activity");
-          return;
-        }
-
-        // Calculate start and end timestamps
-        const startT = Math.floor(Date.now() - parseFloat(position) * 1000);
-        const endT = Math.floor(
-          Date.now() + (parseFloat(duration) - parseFloat(position)) * 1000,
-        );
-
-        invoke("set_activity", {
-          title,
-          artist,
-          album,
-          startT,
-          endT,
-          largeImage: "apple_music",
-          smallImage: "apple_music",
-        } as SongData);
-
-        invoke<AppleMusicData>("apple_request", {
-          title,
-          artist,
-          album,
-        }).then((result) => {
-          let albumData = result.results.album.data.find(
-            (a) => a.attributes.name === album,
-          );
-          let artistData = result.results.artist.data.find(
-            (a) => a.attributes.url === albumData?.attributes.artistUrl,
-          );
-          if (artistData === undefined) {
-            console.error("Artist not found");
-            artistData = result.results.artist.data[0];
-          }
-          if (albumData === undefined) {
-            console.error("Album not found");
-            albumData = result.results.album.data[0];
-          }
-          const albumArtwork = albumData.attributes.artwork.url
-            .replace("{w}", "1024")
-            .replace("{h}", "1024");
-          const artistArtwork = artistData.attributes.artwork.url
-            .replace("{w}", "1024")
-            .replace("{h}", "1024");
-
-          invoke("set_activity", {
-            title,
-            artist,
-            album,
-            startT,
-            endT,
-            largeImage: albumArtwork,
-            smallImage: artistArtwork,
-          } as SongData);
-        });
-      }
-
-      listen("tick", setActivity);
+      listen("tick", () => setActivityMac(command, oldOutput));
     }
   });
 
