@@ -8,7 +8,7 @@ export async function setActivityMac(
 ): Promise<string[] | void> {
   const output = await command.execute();
 
-  if (output.stderr.length > 0) {
+  if (output.stderr.length > 0 || output.stdout.length === 0) {
     console.error("Error executing AppleScript:", output.stderr);
     invoke("clear_activity");
     return;
