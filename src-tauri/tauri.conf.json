@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "aamrp-v2",
+  "productName": "AAMRP",
   "version": "0.1.0",
   "identifier": "dev.iamgabriel.aamrp-v2",
   "build": {
