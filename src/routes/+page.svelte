@@ -85,13 +85,13 @@
     if (interval !== (await store.get<number>("interval"))) {
       message = "Restart the app for changes to take effect.";
     }
+    await store.set("interval", interval);
+    await store.save();
     if (autostart) {
       await enable();
     } else {
       await disable();
     }
-    await store.set("interval", interval);
-    await store.save();
     if (message === "") {
       message = "Settings applied.";
     }
