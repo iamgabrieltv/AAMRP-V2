@@ -8,6 +8,7 @@ export async function setActivityWin(oldOutput: {
     "get_listening_status_win",
   ).catch((error) => {
     console.error("Error fetching media status:", error);
+    invoke("clear_activity");
     return;
   });
 
@@ -51,5 +52,7 @@ export async function setActivityWin(oldOutput: {
 
     // return oldOutput so it can be used in the next call
     return oldOutput;
+  } else {
+    invoke("clear_activity");
   }
 }
