@@ -7,6 +7,11 @@ export async function setArtwork(
   startT: number,
   endT: number,
 ) {
+  if (artist.includes(" & ")) {
+    artist = artist.split(" & ")[0];
+    console.log(artist);
+  }
+
   invoke<AppleMusicData>("apple_request", {
     title,
     artist,
@@ -19,21 +24,20 @@ export async function setArtwork(
       let artistData = result.results.artist?.data.find(
         (a) => a.attributes.url === albumData?.attributes.artistUrl,
       );
-
-      let albumArtwork = "";
-      let artistArtwork = "";
-
-      if (artistData !== undefined) {
-        artistArtwork = artistData.attributes.artwork.url
-          .replace("{w}", "1024")
-          .replace("{h}", "1024");
-      } else console.error("Artist not found");
-
-      if (albumData !== undefined) {
-        albumArtwork = albumData.attributes.artwork.url
-          .replace("{w}", "1024")
-          .replace("{h}", "1024");
-      } else console.error("Album not found");
+      if (artistData === undefined) {
+        console.error("Artist not found");
+        artistData = result.results.artist.data[0];
+      }
+      if (albumData === undefined) {
+        console.error("Album not found");
+        albumData = result.results.album.data[0];
+      }
+      const albumArtwork = albumData.attributes.artwork.url
+        .replace("{w}", "1024")
+        .replace("{h}", "1024");
+      const artistArtwork = artistData.attributes.artwork.url
+        .replace("{w}", "1024")
+        .replace("{h}", "1024");
 
       invoke("set_activity", {
         title,
