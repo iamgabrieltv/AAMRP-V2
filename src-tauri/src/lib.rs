@@ -38,50 +38,55 @@ async fn get_listening_status_win(state: tauri::State<'_, ClientState>) -> Resul
             manager
         }
     };
-    let session = manager
-        .GetCurrentSession()
-        .map_err(|e| format!("Failed to get current session: {e}"))?;
 
-    let session_app_id = session
-        .SourceAppUserModelId()
-        .map_err(|e| format!("Failed to read current session app id: {e}"))?
-        .to_string()
-        .to_lowercase();
+    let sessions = manager
+        .GetSessions()
+        .map_err(|e| format!("Failed to get sessions: {e}"))?;
+    let music_session = sessions
+        .into_iter()
+        .find(|s| {
+            s.SourceAppUserModelId()
+                .map_err(|e| format!("Failed to get session app id: {e}"))
+                .unwrap()
+                .to_string()
+                .to_lowercase()
+                .contains("applemusic")
+        })
+        .ok_or_else(|| format!("No Apple Music session found"))
+        .map_err(|e| format!("Failed to get session: {e}"))?;
 
-    if session_app_id.contains("applemusic") {
-        let status = {
-            let playback_info = session.GetPlaybackInfo().unwrap();
-            match playback_info.PlaybackStatus().unwrap() {
-                GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing => true,
-                GlobalSystemMediaTransportControlsSessionPlaybackStatus::Paused => false,
-                _ => false,
-            }
-        };
-        let media_properties = session.TryGetMediaPropertiesAsync().unwrap().await.unwrap();
-        let [artist, album] = media_properties
-            .Artist()
-            .unwrap()
-            .to_string()
-            .split(" — ")
-            .map(|s| s.to_string())
-            .collect::<Vec<String>>()
-            .try_into()
-            .unwrap_or_else(|_| [String::new(), String::new()]);
-        let timeline_properties = session.GetTimelineProperties().unwrap();
-
-        return Ok(serde_json::json!({
-            "title": media_properties.Title().unwrap().to_string(),
-            "artist": artist,
-            "album": album,
-            "is_playing": status,
-            "position": timeline_properties.Position().unwrap().Duration / 10000000,
-            "duration": timeline_properties.EndTime().unwrap().Duration / 10000000
-        }));
+    let status = {
+        let playback_info = music_session.GetPlaybackInfo().unwrap();
+        match playback_info.PlaybackStatus().unwrap() {
+            GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing => true,
+            GlobalSystemMediaTransportControlsSessionPlaybackStatus::Paused => false,
+            _ => false,
+        }
     };
+    let media_properties = music_session
+        .TryGetMediaPropertiesAsync()
+        .unwrap()
+        .await
+        .unwrap();
+    let [artist, album] = media_properties
+        .Artist()
+        .unwrap()
+        .to_string()
+        .split(" — ")
+        .map(|s| s.to_string())
+        .collect::<Vec<String>>()
+        .try_into()
+        .unwrap_or_else(|_| [String::new(), String::new()]);
+    let timeline_properties = music_session.GetTimelineProperties().unwrap();
 
-    Err(format!(
-        "No Apple Music session found (current session app id: {session_app_id})"
-    ))
+    return Ok(serde_json::json!({
+        "title": media_properties.Title().unwrap().to_string(),
+        "artist": artist,
+        "album": album,
+        "is_playing": status,
+        "position": timeline_properties.Position().unwrap().Duration / 10000000,
+        "duration": timeline_properties.EndTime().unwrap().Duration / 10000000
+    }));
 }
 
 struct ClientState {
