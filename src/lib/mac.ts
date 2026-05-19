@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { Command } from "@tauri-apps/plugin-shell";
-import { appleRequest } from "./common";
+import { setArtwork } from "./common";
 
 export async function setActivityMac(
   command: Command<string>,
@@ -47,7 +47,7 @@ export async function setActivityMac(
     smallImage: "apple_music",
   } as SongData);
 
-  appleRequest(title, artist, album, startT, endT);
+  setArtwork(title, artist, album, startT, endT);
 
   // return oldOutput so it can be used in the next call
   return oldOutput;

@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 
-export async function appleRequest(
+export async function setArtwork(
   title: string,
   artist: string,
   album: string,
@@ -13,26 +13,27 @@ export async function appleRequest(
     album,
   })
     .then((result) => {
-      let albumData = result.results.album.data.find(
+      let albumData = result.results.album?.data.find(
         (a) => a.attributes.name === album,
       );
-      let artistData = result.results.artist.data.find(
+      let artistData = result.results.artist?.data.find(
         (a) => a.attributes.url === albumData?.attributes.artistUrl,
       );
-      if (artistData === undefined) {
-        console.error("Artist not found");
-        artistData = result.results.artist.data[0];
-      }
-      if (albumData === undefined) {
-        console.error("Album not found");
-        albumData = result.results.album.data[0];
-      }
-      const albumArtwork = albumData.attributes.artwork.url
-        .replace("{w}", "1024")
-        .replace("{h}", "1024");
-      const artistArtwork = artistData.attributes.artwork.url
-        .replace("{w}", "1024")
-        .replace("{h}", "1024");
+
+      let albumArtwork = "";
+      let artistArtwork = "";
+
+      if (artistData !== undefined) {
+        artistArtwork = artistData.attributes.artwork.url
+          .replace("{w}", "1024")
+          .replace("{h}", "1024");
+      } else console.error("Artist not found");
+
+      if (albumData !== undefined) {
+        albumArtwork = albumData.attributes.artwork.url
+          .replace("{w}", "1024")
+          .replace("{h}", "1024");
+      } else console.error("Album not found");
 
       invoke("set_activity", {
         title,

@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { appleRequest } from "./common";
+import { setArtwork } from "./common";
 
 export async function setActivityWin(oldOutput: {
   [key: string]: any;
@@ -48,7 +48,7 @@ export async function setActivityWin(oldOutput: {
       smallImage: "apple_music",
     } as SongData);
 
-    appleRequest(output.title, output.artist, output.album, startT, endT);
+    setArtwork(output.title, output.artist, output.album, startT, endT);
 
     // return oldOutput so it can be used in the next call
     return oldOutput;
