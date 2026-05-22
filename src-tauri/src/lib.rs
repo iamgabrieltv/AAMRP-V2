@@ -192,7 +192,11 @@ async fn apple_request(
     };
 
     let base_url = format!("https://amp-api-edge.music.apple.com/v1/catalog/de/search?extend=artistUrl&fields[albums]=artistName,artistUrl,artwork,contentRating,editorialArtwork,editorialNotes,name,playParams,releaseDate,url,trackCount&fields[artists]=url,name,artwork&include[albums]=artists&include[music-videos]=artists&include[songs]=artists&include[stations]=radio-show&l=en-US&limit=21&omit[resource]=autos&platform=web&relate[albums]=artists&relate[songs]=albums&types=activities,albums,apple-curators,artists,curators,editorial-items,music-movies,music-videos,playlists,record-labels,songs,stations,tv-episodes,uploaded-videos&with=lyricHighlights,lyrics,naturalLanguage,serverBubbles,subtitles");
-    let url = Url::parse_with_params(&base_url, [("term", format!("{} {} {}", title, artist, album))]).map_err(|e| e.to_string())?;
+    let url = Url::parse_with_params(
+        &base_url,
+        [("term", format!("{} {} {}", title, artist, album))],
+    )
+    .map_err(|e| e.to_string())?;
 
     let mut headers = HeaderMap::new();
     headers.insert(AUTHORIZATION, HeaderValue::from_static("Bearer eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IldlYlBsYXlLaWQifQ.eyJpc3MiOiJBTVBXZWJQbGF5IiwiaWF0IjoxNzc1ODY1MTMwLCJleHAiOjE3ODMxMjI3MzAsInJvb3RfaHR0cHNfb3JpZ2luIjpbImFwcGxlLmNvbSJdfQ.4vZrrfLuSubBlA6_V4k4VH5VVSq6i5xUa_0s1D5oGwaTgxD9M-WotMjMBlqi5M3ktO133nRk2ZncVYGeYP4sUg"));

@@ -7,9 +7,11 @@ export async function setArtwork(
   startT: number,
   endT: number,
 ) {
+  let artistsDisplay: string | undefined;
   if (artist.includes(" & ")) {
-    artist = artist.split(" & ")[0];
-    console.log(artist);
+    const artists = artist.split(" & ");
+    artist = artists[0];
+    artistsDisplay = artists.join(" & ");
   }
 
   invoke<AppleMusicData>("apple_request", {
@@ -41,7 +43,7 @@ export async function setArtwork(
 
       invoke("set_activity", {
         title,
-        artist,
+        artist: artistsDisplay ?? artist,
         album,
         startT,
         endT,
