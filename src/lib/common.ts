@@ -1,4 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
+import { Command } from "@tauri-apps/plugin-shell";
+import { appCacheDir } from "@tauri-apps/api/path";
+import { exists, readFile, remove } from "@tauri-apps/plugin-fs";
 
 export async function setArtwork(
   title: string,
@@ -41,7 +44,7 @@ export async function setArtwork(
         .replace("{w}", "1024")
         .replace("{h}", "1024");
 
-      invoke("set_activity", {
+      let data: SongData = {
         title,
         artist: artistsDisplay ?? artist,
         album,
@@ -49,7 +52,92 @@ export async function setArtwork(
         endT,
         largeImage: albumArtwork,
         smallImage: artistArtwork,
-      } as SongData);
+      };
+
+      invoke("set_activity", data);
+
+      setAnimatedArtwork(albumData.id, data);
     })
     .catch((error) => console.error("Error fetching Apple Music data:", error));
+}
+
+async function setAnimatedArtwork(id: string, data: SongData) {
+  const checkResponse = await fetch(
+    `https://aamrp.iamgabriel.dev/artwork/${id}.avif`,
+    {
+      method: "HEAD",
+    },
+  );
+  if (checkResponse.ok) {
+    invoke("set_activity", {
+      ...data,
+      largeImage: `https://aamrp.iamgabriel.dev/artwork/${id}.avif`,
+    } as SongData);
+    console.log("Artwork already exists");
+    return;
+  }
+
+  invoke<AppleMusicAlbumData>("apple_animated_artwork_request", {
+    id,
+  }).then(async (result) => {
+    if (result.data[0].attributes.editorialVideo) {
+      const videoUrl =
+        result.data[0].attributes.editorialVideo.motionDetailSquare.video;
+
+      const cacheDir = await appCacheDir();
+      const outputPath = `${cacheDir}/${id}.avif`;
+
+      const command = Command.sidecar("binaries/ffmpeg", [
+        "-protocol_whitelist",
+        "file,http,https,tcp,tls,crypto",
+        "-i",
+        videoUrl,
+        "-c:v",
+        "libsvtav1",
+        "-r",
+        "30",
+        "-an",
+        "-vf",
+        "scale=1080:1080",
+        outputPath,
+      ]);
+      const output = await command.execute();
+      if (output.code !== 0) {
+        console.error("ffmpeg failed with code", output.code);
+        // Cleanup
+        if (await exists(outputPath)) {
+          await remove(outputPath);
+        }
+        return;
+      }
+
+      if (!(await exists(outputPath))) {
+        console.error("Output file not found after ffmpeg execution");
+        return;
+      }
+
+      const avifData = await readFile(outputPath);
+      const apiResponse = await fetch(
+        `https://api.aamrp.iamgabriel.dev/artwork/${id}.avif`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "image/avif",
+          },
+          body: avifData,
+        },
+      );
+      if (apiResponse.ok) {
+        remove(outputPath);
+        invoke("set_activity", {
+          ...data,
+          largeImage: `https://aamrp.iamgabriel.dev/artwork/${id}.avif`,
+        } as SongData);
+      } else {
+        console.error("Failed to upload artwork");
+      }
+    } else {
+      console.warn("No editorial video found for this album");
+    }
+  });
 }

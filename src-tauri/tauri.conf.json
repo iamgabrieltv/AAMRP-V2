@@ -31,6 +31,7 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": ["resources/mac.scpt", "icons/TrayIcon-Template.png"]
+    "resources": ["resources/mac.scpt", "icons/TrayIcon-Template.png"],
+    "externalBin": ["binaries/ffmpeg"]
   }
 }

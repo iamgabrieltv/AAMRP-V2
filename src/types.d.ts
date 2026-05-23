@@ -44,6 +44,21 @@ interface AppleMusicData {
   };
 }
 
+interface AppleMusicAlbumData {
+  data: [
+    {
+      id: string;
+      attributes: {
+        editorialVideo?: {
+          motionDetailSquare: {
+            video: string;
+          };
+        };
+      };
+    },
+  ];
+}
+
 interface WindowsMediaResponse {
   title: string;
   artist: string;

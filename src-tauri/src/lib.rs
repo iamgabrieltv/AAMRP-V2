@@ -213,9 +213,38 @@ async fn apple_request(
     Ok(result)
 }
 
+#[tauri::command]
+async fn apple_animated_artwork_request(
+    state: tauri::State<'_, ClientState>,
+    id: String,
+) -> Result<Value, String> {
+    let client = {
+        let mut http_client = state.http_client.lock().unwrap();
+        http_client.get_or_insert_with(Client::new).clone()
+    };
+
+    let base_url = format!("https://amp-api.music.apple.com/v1/catalog/de/albums/{id}?extend=editorialVideo&l=en-US&platform=web");
+    let url = Url::parse(&base_url).map_err(|e| e.to_string())?;
+
+    let mut headers = HeaderMap::new();
+    headers.insert(AUTHORIZATION, HeaderValue::from_static("Bearer eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IldlYlBsYXlLaWQifQ.eyJpc3MiOiJBTVBXZWJQbGF5IiwiaWF0IjoxNzc1ODY1MTMwLCJleHAiOjE3ODMxMjI3MzAsInJvb3RfaHR0cHNfb3JpZ2luIjpbImFwcGxlLmNvbSJdfQ.4vZrrfLuSubBlA6_V4k4VH5VVSq6i5xUa_0s1D5oGwaTgxD9M-WotMjMBlqi5M3ktO133nRk2ZncVYGeYP4sUg"));
+    headers.insert(ORIGIN, HeaderValue::from_static("https://music.apple.com"));
+
+    let response = client
+        .get(url)
+        .headers(headers)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    let result = response.json::<Value>().await.map_err(|e| e.to_string())?;
+
+    Ok(result)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_autostart::Builder::new().build())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
@@ -227,6 +256,7 @@ pub fn run() {
             clear_activity,
             set_activity,
             apple_request,
+            apple_animated_artwork_request,
             set_interval,
             #[cfg(target_os = "windows")]
             get_listening_status_win

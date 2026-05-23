@@ -11,6 +11,25 @@
     "os:default",
     "shell:default",
     "store:default",
-    "autostart:default"
+    "autostart:default",
+    "fs:default",
+    {
+      "identifier": "fs:scope",
+      "allow": ["$CACHE/**"]
+    },
+    {
+      "identifier": "fs:allow-remove",
+      "allow": ["$CACHE/**"]
+    },
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "binaries/ffmpeg",
+          "sidecar": true,
+          "args": true
+        }
+      ]
+    }
   ]
 }
