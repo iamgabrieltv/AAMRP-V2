@@ -17,6 +17,7 @@ jobs:
         run: |
           bun install -g wrangler@latest
           wrangler r2 object get --remote aamrp/binaries/ffmpeg-aarch64-apple-darwin --file ./src-tauri/binaries/ffmpeg-aarch64-apple-darwin
+          chmod +x ./src-tauri/binaries/ffmpeg-aarch64-apple-darwin
       - run: bun tauri build --bundles app
       - uses: actions/upload-artifact@v7
         with:
