@@ -84,7 +84,7 @@ async fn get_listening_status_win(state: tauri::State<'_, ClientState>) -> Resul
         "artist": artist,
         "album": album,
         "is_playing": status,
-        "position": timeline_properties.Position().unwrap().Duration / 10000000,
+        "position": timeline_properties.Position().unwrap().Duration / 10000000 + 1,
         "duration": timeline_properties.EndTime().unwrap().Duration / 10000000
     }));
 }
