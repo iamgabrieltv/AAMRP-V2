@@ -10,7 +10,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install
       # - run: curl --create-dirs -v --fail -L "https://aamrp.iamgabriel.dev/binaries/ffmpeg-aarch64-apple-darwin" -o "src-tauri/binaries/ffmpeg-aarch64-apple-darwin"
-      - uses: keithweaver/aws-s3-github-action@v1
+      - uses: keithweaver/aws-s3-github-action@v1.0.0
         with:
           command: cp
           source: s3://4cab3932046a09b0ff01639eac5ba03d.r2.cloudflarestorage.com/binaries/ffmpeg-aarch64-apple-darwin
