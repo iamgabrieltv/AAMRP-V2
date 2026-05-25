@@ -1,0 +1,25 @@
+name: Build macOS Intel .app
+
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - name: Download ffmpeg
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          bun install -g wrangler@latest
+          wrangler r2 object get --remote aamrp/binaries/ffmpeg-x86_64-apple-darwin --file ./src-tauri/binaries/ffmpeg-x86_64-apple-darwin
+          chmod +x ./src-tauri/binaries/ffmpeg-x86_64-apple-darwin
+      - name: Download x86_64-apple-darwin
+        run: rustup target add x86_64-apple-darwin
+      - run: bun tauri build --bundles dmg --target x86_64-apple-darwin
+      - uses: actions/upload-artifact@v7
+        with:
+          path: src-tauri/target/release/bundle/*
