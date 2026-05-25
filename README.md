@@ -18,7 +18,8 @@ Mac users need to run a command before they'll be able to run the app. This is b
 # Credits
 
 - This app uses a self-compiled build of [FFmpeg](https://ffmpeg.org/) licensed under the [GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html) license
-  - Build for Windows x64: https://aamrp.iamgabriel.dev/binaries/ffmpeg-x86_64-pc-windows-msvc.exe
+  - Build for Windows x86_64: https://aamrp.iamgabriel.dev/binaries/ffmpeg-x86_64-pc-windows-msvc.exe
   - Build for macOS aarch64: https://aamrp.iamgabriel.dev/binaries/ffmpeg-aarch64-apple-darwin
+  - Build for macOS x86_64: https://aamrp.iamgabriel.dev/binaries/ffmpeg-x86_64-apple-darwin
 - This app was made using [Tauri](https://tauri.app/)
 - This app is in no way affiliated with Apple
