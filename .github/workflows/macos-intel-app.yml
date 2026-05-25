@@ -22,4 +22,4 @@ jobs:
       - run: bun tauri build --bundles app --target x86_64-apple-darwin
       - uses: actions/upload-artifact@v7
         with:
-          path: src-tauri/target/release/bundle/*
+          path: src-tauri/target/x86_64-apple-darwin/release/bundle/*
