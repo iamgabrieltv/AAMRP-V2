@@ -1,5 +1,5 @@
 > [!WARNING]
-> This app uses ffmpeg to convert the animated cover to AVIF if the file doesn't exist on the server yet. This can cause a short spike of resource and network usage on your system. (not supported on Windows ARM or Intel Macs unless requested)
+> This app uses ffmpeg to convert the animated cover to AVIF if the file doesn't exist on the server yet. This can cause a short spike of resource and network usage on your system. (not supported on Windows ARM as of now)
 
 # AAMRP
 
