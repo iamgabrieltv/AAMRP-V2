@@ -13,6 +13,11 @@ export async function setActivityWin(oldOutput: {
   });
 
   if (output) {
+    if ((output.duration === 0 || output.position === 0) && output.is_playing) {
+      console.log("detected 0/0, returning");
+      return;
+    }
+
     if (
       oldOutput.title === output.title &&
       oldOutput.artist === output.artist &&
