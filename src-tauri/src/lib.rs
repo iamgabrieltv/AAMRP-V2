@@ -152,14 +152,14 @@ async fn set_activity(
             activity::Activity::new()
                 .activity_type(activity::ActivityType::Listening)
                 .status_display_type(activity::StatusDisplayType::State)
-                .state(&artist)
-                .details(title.clone())
+                .state(artist.clone() + " ")
+                .details(title.clone() + " ")
                 .assets(
                     activity::Assets::new()
                         .large_image(large_image.clone())
-                        .large_text(album.clone())
+                        .large_text(album.clone() + " ")
                         .small_image(small_image.clone())
-                        .small_text(&artist),
+                        .small_text(artist.clone() + " "),
                 )
                 .timestamps(activity::Timestamps::new().start(start_t).end(end_t)),
         );
