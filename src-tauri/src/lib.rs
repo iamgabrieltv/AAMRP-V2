@@ -92,6 +92,7 @@ async fn get_listening_status_win(state: tauri::State<'_, ClientState>) -> Resul
 struct ClientState {
     client: Mutex<DiscordIpcClient>,
     http_client: Mutex<Option<Client>>,
+    auth_token: Mutex<Option<String>>,
     #[cfg(target_os = "windows")]
     manager: Mutex<Option<Arc<GlobalSystemMediaTransportControlsSessionManager>>>,
 }
@@ -179,6 +180,29 @@ async fn set_activity(
     }
 }
 
+async fn get_or_fetch_auth_token(state: &tauri::State<'_, ClientState>) -> Result<String, String> {
+    if let Some(token) = state.auth_token.lock().unwrap().clone() {
+        return Ok(token);
+    }
+
+    let client = {
+        let mut http_client = state.http_client.lock().unwrap();
+        http_client.get_or_insert_with(Client::new).clone()
+    };
+
+    let response = client
+        .get("https://raw.githubusercontent.com/iamgabrieltv/AAMRP-V2/refs/heads/main/public_token")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    let token = response.text().await.map_err(|e| e.to_string())?;
+    let trimmed_token = token.trim().to_string();
+
+    *state.auth_token.lock().unwrap() = Some(trimmed_token.clone());
+
+    Ok(trimmed_token)
+}
+
 #[tauri::command]
 async fn apple_request(
     state: tauri::State<'_, ClientState>,
@@ -198,8 +222,13 @@ async fn apple_request(
     )
     .map_err(|e| e.to_string())?;
 
+    let auth_token = get_or_fetch_auth_token(&state).await?;
+
     let mut headers = HeaderMap::new();
-    headers.insert(AUTHORIZATION, HeaderValue::from_static("Bearer eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IldlYlBsYXlLaWQifQ.eyJpc3MiOiJBTVBXZWJQbGF5IiwiaWF0IjoxNzc1ODY1MTMwLCJleHAiOjE3ODMxMjI3MzAsInJvb3RfaHR0cHNfb3JpZ2luIjpbImFwcGxlLmNvbSJdfQ.4vZrrfLuSubBlA6_V4k4VH5VVSq6i5xUa_0s1D5oGwaTgxD9M-WotMjMBlqi5M3ktO133nRk2ZncVYGeYP4sUg"));
+    headers.insert(
+        AUTHORIZATION,
+        HeaderValue::from_str(&format!("Bearer {auth_token}")).map_err(|e| e.to_string())?,
+    );
     headers.insert(ORIGIN, HeaderValue::from_static("https://music.apple.com"));
 
     let response = client
@@ -227,7 +256,6 @@ async fn apple_animated_artwork_request(
     let url = Url::parse(&base_url).map_err(|e| e.to_string())?;
 
     let mut headers = HeaderMap::new();
-    headers.insert(AUTHORIZATION, HeaderValue::from_static("Bearer eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IldlYlBsYXlLaWQifQ.eyJpc3MiOiJBTVBXZWJQbGF5IiwiaWF0IjoxNzc1ODY1MTMwLCJleHAiOjE3ODMxMjI3MzAsInJvb3RfaHR0cHNfb3JpZ2luIjpbImFwcGxlLmNvbSJdfQ.4vZrrfLuSubBlA6_V4k4VH5VVSq6i5xUa_0s1D5oGwaTgxD9M-WotMjMBlqi5M3ktO133nRk2ZncVYGeYP4sUg"));
     headers.insert(ORIGIN, HeaderValue::from_static("https://music.apple.com"));
 
     let response = client
@@ -264,6 +292,7 @@ pub fn run() {
         .manage(ClientState {
             client: Mutex::new(DiscordIpcClient::new("1423726101519274056")),
             http_client: Mutex::new(None),
+            auth_token: Mutex::new(None),
             #[cfg(target_os = "windows")]
             manager: Mutex::new(None),
         })
