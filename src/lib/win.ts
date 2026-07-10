@@ -19,7 +19,10 @@ export async function setActivityWin(oldOutput: {
       return oldOutput;
     }
 
-    if (output.position === output.duration - 1) {
+    if (
+      output.position === output.duration ||
+      output.position === output.duration - 1
+    ) {
       oldOutput = {};
       console.log("clearing at " + output.position + "/" + output.duration);
       return oldOutput;

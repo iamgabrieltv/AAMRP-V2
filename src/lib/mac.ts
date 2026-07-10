@@ -26,6 +26,15 @@ export async function setActivityMac(
     oldOutput = [title, artist, album, state];
   }
 
+  if (
+    parseFloat(position) === parseFloat(duration) ||
+    parseFloat(position) === parseFloat(duration) - 1
+  ) {
+    oldOutput = [];
+    console.log("clearing at " + position + "/" + duration);
+    return oldOutput;
+  }
+
   if (state === "paused") {
     invoke("clear_activity");
     return oldOutput;
