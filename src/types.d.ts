@@ -67,3 +67,8 @@ interface WindowsMediaResponse {
   position: number;
   duration: number;
 }
+
+interface GitHubResponse {
+  tag_name: string;
+  html_url: string;
+}

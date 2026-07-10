@@ -10,14 +10,20 @@
   import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
   import { setActivityMac } from "$lib/mac";
   import { setActivityWin } from "$lib/win";
+  import { getVersion } from "@tauri-apps/api/app";
+  import { openUrl } from "@tauri-apps/plugin-opener";
+  import { ask } from "@tauri-apps/plugin-dialog";
 
   const currentPlatform = platform();
+
+  let appVersion = $state<string>("");
 
   let autostart = $state<boolean>();
 
   let ranInit = false;
 
   onMount(async () => {
+    appVersion = await getVersion();
     autostart = await isEnabled();
     if (autostart) {
       await getCurrentWebviewWindow().hide();
@@ -61,6 +67,26 @@
       }
 
       listen("tick", setActivity);
+
+      // Check for updates
+      const response = await fetch(
+        "https://api.github.com/repos/iamgabrieltv/AAMRP-V2/releases/latest",
+      );
+      const data: GitHubResponse = await response.json();
+      if (data.tag_name !== `v${appVersion}`) {
+        const answer = await ask(
+          `New version ${data.tag_name} is available. Open release page?`,
+          {
+            title: "AAMRP Update available",
+            kind: "info",
+          },
+        );
+
+        if (answer) {
+          openUrl(data.html_url);
+        }
+      }
+
       ranInit = true;
     }
   });
@@ -92,9 +118,16 @@
         class="w-5 h-5 rounded-sm"
       /></label
     >
-    <button onclick={applyHandler} class="w-fit p-1 my-1 rounded-md"
+    <button onclick={applyHandler} class="w-fit p-1 my-1 rounded-md btn"
       >Apply</button
     >
   </form>
   <p class="text-[#f38ba8] font-bold text-pretty">{message}</p>
+  <button
+    type="button"
+    class="text-xs text-gray-500 fixed bottom-2 right-2 cursor-pointer"
+    onclick={() => openUrl("https://github.com/iamgabrieltv/AAMRP-V2/releases")}
+  >
+    v{appVersion}
+  </button>
 </main>

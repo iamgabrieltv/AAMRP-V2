@@ -16,12 +16,12 @@
   -webkit-text-size-adjust: 100%;
 }
 
-button {
+.btn {
   color: #1e1e2e;
   background-color: #cdd6f4;
 }
 
-button:hover {
+.btn:hover {
   background-color: #9399b2;
 }
 
