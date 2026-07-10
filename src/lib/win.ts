@@ -14,8 +14,15 @@ export async function setActivityWin(oldOutput: {
 
   if (output) {
     if ((output.duration === 0 || output.position === 0) && output.is_playing) {
-      console.log("detected 0/0, returning");
-      return;
+      oldOutput = {};
+      console.log("detected 0/0, returning and clearing");
+      return oldOutput;
+    }
+
+    if (output.position === output.duration - 1) {
+      oldOutput = {};
+      console.log("clearing at " + output.position + "/" + output.duration);
+      return oldOutput;
     }
 
     if (
