@@ -5,7 +5,6 @@
   import { listen } from "@tauri-apps/api/event";
   import { platform } from "@tauri-apps/plugin-os";
   import { Command } from "@tauri-apps/plugin-shell";
-  import { Store } from "@tauri-apps/plugin-store";
   import { enable, isEnabled, disable } from "@tauri-apps/plugin-autostart";
   import { onDestroy, onMount } from "svelte";
   import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
@@ -14,8 +13,6 @@
 
   const currentPlatform = platform();
 
-  let store: Store;
-  let interval = $state<number>();
   let autostart = $state<boolean>();
 
   let ranInit = false;
@@ -26,13 +23,6 @@
       await getCurrentWebviewWindow().hide();
     }
 
-    store = await Store.load("config.json");
-    interval = await store.get<number>("interval");
-    if (interval === undefined) {
-      await store.set("interval", 5);
-      interval = 5;
-    }
-
     await invoke("connect");
 
     if (currentPlatform === "macos" && !ranInit) {
@@ -41,7 +31,7 @@
       const command = Command.create("osascript", scriptPath);
       let oldOutput: string[] = [];
 
-      invoke("set_interval", { interval });
+      invoke("set_interval");
 
       function setActivity() {
         setActivityMac(command, oldOutput).then((output) => {
@@ -60,7 +50,7 @@
     if (currentPlatform === "windows" && !ranInit) {
       let oldOutput = {};
 
-      invoke("set_interval", { interval });
+      invoke("set_interval");
 
       function setActivity() {
         setActivityWin(oldOutput).then((output) => {
@@ -76,17 +66,11 @@
   });
 
   onDestroy(async () => {
-    invoke("disconnect");
-    await store.save();
+    await invoke("disconnect");
   });
 
   let message = $state<string>("");
   async function applyHandler() {
-    if (interval !== (await store.get<number>("interval"))) {
-      message = "Restart the app for changes to take effect.";
-    }
-    await store.set("interval", interval);
-    await store.save();
     if (autostart) {
       await enable();
     } else {
@@ -101,14 +85,6 @@
 <main class="p-2">
   <h1 class="text-4xl font-bold">Settings</h1>
   <form class="flex flex-col gap-1 items-start">
-    <label class="flex flex-col"
-      >Update Interval (seconds) <input
-        type="number"
-        bind:value={interval}
-        min="1"
-        class="rounded-sm px-1"
-      /></label
-    >
     <label class="flex flex-col"
       >Autostart app on system startup <input
         type="checkbox"

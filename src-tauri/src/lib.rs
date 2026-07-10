@@ -98,9 +98,9 @@ struct ClientState {
 }
 
 #[tauri::command]
-async fn set_interval(app: AppHandle, interval: u64) -> Result<(), String> {
+async fn set_interval(app: AppHandle) -> Result<(), String> {
     tauri::async_runtime::spawn(async move {
-        let mut tick = tokio::time::interval(Duration::from_secs(interval));
+        let mut tick = tokio::time::interval(Duration::from_secs(1));
         loop {
             tick.tick().await;
             app.emit("tick", ());
