@@ -255,7 +255,13 @@ async fn apple_animated_artwork_request(
     let base_url = format!("https://amp-api.music.apple.com/v1/catalog/de/albums/{id}?extend=editorialVideo&l=en-US&platform=web");
     let url = Url::parse(&base_url).map_err(|e| e.to_string())?;
 
+    let auth_token = get_or_fetch_auth_token(&state).await?;
+
     let mut headers = HeaderMap::new();
+    headers.insert(
+        AUTHORIZATION,
+        HeaderValue::from_str(&format!("Bearer {auth_token}")).map_err(|e| e.to_string())?,
+    );
     headers.insert(ORIGIN, HeaderValue::from_static("https://music.apple.com"));
 
     let response = client
