@@ -13,6 +13,7 @@
   import { getVersion } from "@tauri-apps/api/app";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { ask } from "@tauri-apps/plugin-dialog";
+  import { checkUpdates } from "$lib/updateChecker";
 
   const currentPlatform = platform();
 
@@ -69,23 +70,7 @@
       listen("tick", setActivity);
 
       // Check for updates
-      const response = await fetch(
-        "https://api.github.com/repos/iamgabrieltv/AAMRP-V2/releases/latest",
-      );
-      const data: GitHubResponse = await response.json();
-      if (data.tag_name !== `v${appVersion}`) {
-        const answer = await ask(
-          `New version ${data.tag_name} is available. Open release page?`,
-          {
-            title: "AAMRP Update available",
-            kind: "info",
-          },
-        );
-
-        if (answer) {
-          openUrl(data.html_url);
-        }
-      }
+      checkUpdates();
 
       ranInit = true;
     }
@@ -123,11 +108,19 @@
     >
   </form>
   <p class="text-[#f38ba8] font-bold text-pretty">{message}</p>
-  <button
-    type="button"
-    class="text-xs text-gray-500 fixed bottom-2 right-2 cursor-pointer"
-    onclick={() => openUrl("https://github.com/iamgabrieltv/AAMRP-V2/releases")}
-  >
-    v{appVersion}
-  </button>
+  <div class="fixed bottom-2 right-2">
+    <button
+      class="text-xs text-gray-500 underline cursor-pointer"
+      type="button"
+      onclick={checkUpdates}>Check for Updates</button
+    >
+    <button
+      type="button"
+      class="text-xs text-gray-500 cursor-pointer"
+      onclick={() =>
+        openUrl("https://github.com/iamgabrieltv/AAMRP-V2/releases")}
+    >
+      v{appVersion}
+    </button>
+  </div>
 </main>
