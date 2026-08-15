@@ -70,7 +70,7 @@
       listen("tick", setActivity);
 
       // Check for updates
-      checkUpdates();
+      checkUpdates(true);
 
       ranInit = true;
     }
@@ -112,7 +112,7 @@
     <button
       class="text-xs text-gray-500 underline cursor-pointer"
       type="button"
-      onclick={checkUpdates}>Check for Updates</button
+      onclick={() => checkUpdates(false)}>Check for Updates</button
     >
     <button
       type="button"

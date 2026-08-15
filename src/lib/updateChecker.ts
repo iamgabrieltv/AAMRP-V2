@@ -2,7 +2,7 @@ import { ask, message } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { getVersion } from "@tauri-apps/api/app";
 
-export async function checkUpdates() {
+export async function checkUpdates(auto: boolean) {
   const appVersion = await getVersion();
   const response = await fetch(
     "https://api.github.com/repos/iamgabrieltv/AAMRP-V2/releases/latest",
@@ -21,9 +21,11 @@ export async function checkUpdates() {
       openUrl(data.html_url);
     }
   } else {
-    await message("No updates available", {
-      title: "AAMRP Update Checker",
-      kind: "info",
-    });
+    if (!auto) {
+      await message("No updates available", {
+        title: "AAMRP Update Checker",
+        kind: "info",
+      });
+    }
   }
 }
