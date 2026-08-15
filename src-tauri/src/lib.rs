@@ -1,9 +1,10 @@
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use discord_rich_presence::{activity, DiscordIpc, DiscordIpcClient};
+use regex::Regex;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, ORIGIN};
-use reqwest::{Client, Url};
+use reqwest::{Client, StatusCode, Url};
 use serde_json::Value;
 use tauri::image::Image;
 use tauri::{
@@ -11,9 +12,7 @@ use tauri::{
     tray::TrayIconBuilder,
     AppHandle, Emitter, Manager,
 };
-
-#[cfg(target_os = "windows")]
-use std::sync::Arc;
+use tauri_plugin_store::{Store, StoreExt};
 
 #[cfg(target_os = "windows")]
 use windows::Media::Control::{
@@ -93,6 +92,7 @@ struct ClientState {
     client: Mutex<DiscordIpcClient>,
     http_client: Mutex<Option<Client>>,
     auth_token: Mutex<Option<String>>,
+    auth_store: Mutex<Option<Arc<Store<tauri::Wry>>>>,
     #[cfg(target_os = "windows")]
     manager: Mutex<Option<Arc<GlobalSystemMediaTransportControlsSessionManager>>>,
 }
@@ -180,27 +180,95 @@ async fn set_activity(
     }
 }
 
-async fn get_or_fetch_auth_token(state: &tauri::State<'_, ClientState>) -> Result<String, String> {
-    if let Some(token) = state.auth_token.lock().unwrap().clone() {
-        return Ok(token);
-    }
-
+async fn fetch_apple_auth_token(state: &tauri::State<'_, ClientState>) -> Result<String, String> {
     let client = {
         let mut http_client = state.http_client.lock().unwrap();
         http_client.get_or_insert_with(Client::new).clone()
     };
 
-    let response = client
-        .get("https://raw.githubusercontent.com/iamgabrieltv/AAMRP-V2/refs/heads/main/public_token")
+    let html = client
+        .get("https://music.apple.com")
         .send()
         .await
+        .map_err(|e| e.to_string())?
+        .text()
+        .await
         .map_err(|e| e.to_string())?;
-    let token = response.text().await.map_err(|e| e.to_string())?;
-    let trimmed_token = token.trim().to_string();
 
-    *state.auth_token.lock().unwrap() = Some(trimmed_token.clone());
+    let script_regex = Regex::new(r#"(?is)<script[^>]+src=["'](/assets/[^"']+?\.js(?:\?[^"']*)?)["'][^>]*>"#)
+        .map_err(|e| e.to_string())?;
+    let script_url = script_regex
+        .captures(&html)
+        .and_then(|caps| caps.get(1))
+        .map(|m| m.as_str().to_string())
+        .ok_or_else(|| "No /assets script tag found in Apple Music HTML".to_string())?;
 
-    Ok(trimmed_token)
+    let script_url = if script_url.starts_with("http") {
+        script_url
+    } else {
+        format!("https://music.apple.com{script_url}")
+    };
+
+    let script = client
+        .get(&script_url)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?
+        .text()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let token_regex = Regex::new(r#"eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+"#)
+        .map_err(|e| e.to_string())?;
+    let token = token_regex
+        .captures(&script)
+        .and_then(|caps| caps.get(0))
+        .map(|m| m.as_str().to_string())
+        .ok_or_else(|| "No Apple Music auth token found in script bundle".to_string())?;
+
+    let store = state
+        .auth_store
+        .lock()
+        .unwrap()
+        .clone()
+        .ok_or_else(|| "Apple Music auth store is not initialized".to_string())?;
+
+    store.set("apple_music_auth_token", serde_json::Value::String(token.clone()));
+    store
+        .save()
+        .map_err(|e| e.to_string())?;
+
+    *state.auth_token.lock().unwrap() = Some(token.clone());
+
+    Ok(token)
+}
+
+async fn get_or_fetch_auth_token(
+    state: &tauri::State<'_, ClientState>,
+    force_refresh: bool,
+) -> Result<String, String> {
+    if !force_refresh {
+        if let Some(token) = state.auth_token.lock().unwrap().clone() {
+            return Ok(token);
+        }
+
+        let store = state
+            .auth_store
+            .lock()
+            .unwrap()
+            .clone()
+            .ok_or_else(|| "Apple Music auth store is not initialized".to_string())?;
+
+        if let Some(token) = store
+            .get("apple_music_auth_token")
+            .and_then(|value| value.as_str().map(str::to_owned))
+        {
+            *state.auth_token.lock().unwrap() = Some(token.clone());
+            return Ok(token);
+        }
+    }
+
+    fetch_apple_auth_token(state).await
 }
 
 #[tauri::command]
@@ -222,7 +290,7 @@ async fn apple_request(
     )
     .map_err(|e| e.to_string())?;
 
-    let auth_token = get_or_fetch_auth_token(&state).await?;
+    let auth_token = get_or_fetch_auth_token(&state, false).await?;
 
     let mut headers = HeaderMap::new();
     headers.insert(
@@ -231,12 +299,36 @@ async fn apple_request(
     );
     headers.insert(ORIGIN, HeaderValue::from_static("https://music.apple.com"));
 
-    let response = client
-        .get(url)
+    let mut response = client
+        .get(url.clone())
         .headers(headers)
         .send()
         .await
         .map_err(|e| e.to_string())?;
+
+    if response.status() == StatusCode::UNAUTHORIZED {
+        *state.auth_token.lock().unwrap() = None;
+        let fresh_token = get_or_fetch_auth_token(&state, true).await?;
+
+        let mut refreshed_headers = HeaderMap::new();
+        refreshed_headers.insert(
+            AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {fresh_token}")).map_err(|e| e.to_string())?,
+        );
+        refreshed_headers.insert(ORIGIN, HeaderValue::from_static("https://music.apple.com"));
+
+        response = client
+            .get(url.clone())
+            .headers(refreshed_headers)
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+    }
+
+    if response.status() == StatusCode::UNAUTHORIZED {
+        return Err("Apple Music API unauthorized after token refresh".to_string());
+    }
+
     let result = response.json::<Value>().await.map_err(|e| e.to_string())?;
 
     Ok(result)
@@ -255,7 +347,7 @@ async fn apple_animated_artwork_request(
     let base_url = format!("https://amp-api.music.apple.com/v1/catalog/de/albums/{id}?extend=editorialVideo&l=en-US&platform=web");
     let url = Url::parse(&base_url).map_err(|e| e.to_string())?;
 
-    let auth_token = get_or_fetch_auth_token(&state).await?;
+    let auth_token = get_or_fetch_auth_token(&state, false).await?;
 
     let mut headers = HeaderMap::new();
     headers.insert(
@@ -264,12 +356,36 @@ async fn apple_animated_artwork_request(
     );
     headers.insert(ORIGIN, HeaderValue::from_static("https://music.apple.com"));
 
-    let response = client
-        .get(url)
+    let mut response = client
+        .get(url.clone())
         .headers(headers)
         .send()
         .await
         .map_err(|e| e.to_string())?;
+
+    if response.status() == StatusCode::UNAUTHORIZED {
+        *state.auth_token.lock().unwrap() = None;
+        let fresh_token = get_or_fetch_auth_token(&state, true).await?;
+
+        let mut refreshed_headers = HeaderMap::new();
+        refreshed_headers.insert(
+            AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {fresh_token}")).map_err(|e| e.to_string())?,
+        );
+        refreshed_headers.insert(ORIGIN, HeaderValue::from_static("https://music.apple.com"));
+
+        response = client
+            .get(url.clone())
+            .headers(refreshed_headers)
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+    }
+
+    if response.status() == StatusCode::UNAUTHORIZED {
+        return Err("Apple Music API unauthorized after token refresh".to_string());
+    }
+
     let result = response.json::<Value>().await.map_err(|e| e.to_string())?;
 
     Ok(result)
@@ -300,10 +416,20 @@ pub fn run() {
             client: Mutex::new(DiscordIpcClient::new("1423726101519274056")),
             http_client: Mutex::new(None),
             auth_token: Mutex::new(None),
+            auth_store: Mutex::new(None),
             #[cfg(target_os = "windows")]
             manager: Mutex::new(None),
         })
         .setup(|app| {
+            let auth_store = app.store("apple-auth.json")?;
+            let stored_token = auth_store
+                .get("apple_music_auth_token")
+                .and_then(|value| value.as_str().map(str::to_owned));
+
+            let state = app.state::<ClientState>();
+            *state.auth_token.lock().unwrap() = stored_token.clone();
+            *state.auth_store.lock().unwrap() = Some(auth_store.clone());
+
             let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
             let show_i = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show_i, &quit_i])?;

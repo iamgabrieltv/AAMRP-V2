@@ -7,6 +7,7 @@ name = "aamrp-v2"
 version = "0.1.0"
 dependencies = [
  "discord-rich-presence",
+ "regex",
  "reqwest",
  "serde",
  "serde_json",
