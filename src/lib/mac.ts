@@ -27,8 +27,8 @@ export async function setActivityMac(
   }
 
   if (
-    parseFloat(position) === parseFloat(duration) ||
-    parseFloat(position) === parseFloat(duration) - 1
+    Math.floor(parseFloat(position)) === Math.floor(parseFloat(duration)) ||
+    Math.floor(parseFloat(position)) === Math.floor(parseFloat(duration)) - 1
   ) {
     oldOutput = [];
     console.log("clearing at " + position + "/" + duration);
