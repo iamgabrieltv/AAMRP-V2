@@ -12,9 +12,15 @@ export async function setArtwork(
 ) {
   let artistsDisplay: string | undefined;
   if (artist.includes(" & ")) {
-    const artists = artist.split(" & ");
-    artist = artists[0];
-    artistsDisplay = artists.join(" & ");
+    if (artist.includes(", ")) {
+      let artists = artist.split(", ");
+      artist = artists[0];
+      artistsDisplay = artists.join(", ");
+    } else {
+      const artists = artist.split(" & ");
+      artist = artists[0];
+      artistsDisplay = artists.join(" & ");
+    }
   }
 
   invoke<AppleMusicData>("apple_request", {
