@@ -16,23 +16,23 @@ export async function setActivityMac(
 
   const [title, artist, album, state, duration, position] =
     output.stdout.split("$s$");
-
-  if (
+  const currentPosition = parseFloat(position);
+  const previousPosition = parseFloat(oldOutput[4]);
+  const trackData = [title, artist, album, state];
+  const isLooping =
     oldOutput.length > 0 &&
-    oldOutput.every((v, i) => v === [title, artist, album, state][i])
-  ) {
-    return;
-  } else {
-    oldOutput = [title, artist, album, state];
-  }
+    Number.isFinite(previousPosition) &&
+    Number.isFinite(currentPosition) &&
+    currentPosition < previousPosition;
 
   if (
-    Math.floor(parseFloat(position)) === Math.floor(parseFloat(duration)) ||
-    Math.floor(parseFloat(position)) === Math.floor(parseFloat(duration)) - 1
+    !isLooping &&
+    oldOutput.length > 0 &&
+    oldOutput.slice(0, 4).every((v, i) => v === trackData[i])
   ) {
-    oldOutput = [];
-    console.log("clearing at " + position + "/" + duration);
-    return oldOutput;
+    return [...oldOutput.slice(0, 4), position];
+  } else {
+    oldOutput = [...trackData, position];
   }
 
   if (state === "paused") {
@@ -41,9 +41,9 @@ export async function setActivityMac(
   }
 
   // Calculate start and end timestamps
-  const startT = Math.floor(Date.now() - parseFloat(position) * 1000);
+  const startT = Math.floor(Date.now() - currentPosition * 1000);
   const endT = Math.floor(
-    Date.now() + (parseFloat(duration) - parseFloat(position)) * 1000,
+    Date.now() + (parseFloat(duration) - currentPosition) * 1000,
   );
 
   invoke("set_activity", {

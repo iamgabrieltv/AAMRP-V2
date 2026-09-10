@@ -13,6 +13,13 @@ export async function setActivityWin(oldOutput: {
   });
 
   if (output) {
+    const currentPosition = output.position;
+    const previousPosition = oldOutput.position;
+    const isLooping =
+      Number.isFinite(previousPosition) &&
+      Number.isFinite(currentPosition) &&
+      currentPosition < previousPosition;
+
     if ((output.duration === 0 || output.position === 0) && output.is_playing) {
       oldOutput = {};
       console.log("detected 0/0, returning and clearing");
@@ -29,6 +36,7 @@ export async function setActivityWin(oldOutput: {
     }
 
     if (
+      !isLooping &&
       oldOutput.title === output.title &&
       oldOutput.artist === output.artist &&
       oldOutput.album === output.album &&
@@ -41,6 +49,7 @@ export async function setActivityWin(oldOutput: {
         artist: output.artist,
         album: output.album,
         is_playing: output.is_playing,
+        position: currentPosition,
       };
     }
 
